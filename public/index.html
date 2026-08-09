@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>אוהד שפינדל</title>
+
+<!-- Static SEO / social preview. Edit alongside content.js meta. -->
+<meta name="description" content="האתר האישי של אוהד שפינדל — עליי, הפרויקטים שלי, ואיך יוצרים איתי קשר.">
+<meta name="theme-color" content="#12101a">
+<meta property="og:type" content="profile">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="אוהד שפינדל">
+<meta property="og:description" content="האתר האישי של אוהד שפינדל — עליי, הפרויקטים שלי, ואיך יוצרים איתי קשר.">
+<meta property="og:image" content="assets/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+<!-- Hebrew glyphs are on the critical path — preload before CSS is parsed. -->
+<link rel="preload" href="assets/fonts/heebo-hebrew.woff2" as="font" type="font/woff2" crossorigin>
+
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<link rel="stylesheet" href="assets/css/views.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "אוהד שפינדל",
+  "description": "האתר האישי של אוהד שפינדל"
+}
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">דילוג לתוכן</a>
+
+<!-- Decorative background: pre-blurred gradients, no runtime filter cost. -->
+<div class="bg-field" aria-hidden="true">
+  <span class="orb orb-1"></span>
+  <span class="orb orb-2"></span>
+  <span class="orb orb-3"></span>
+  <span class="bg-grain"></span>
+</div>
+
+<div class="scroll-progress" aria-hidden="true"><i></i></div>
+
+<header class="site-header" id="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="#about">
+      <span class="brand-mark" id="brand-mark"></span>
+      <span class="brand-text" id="brand-name"></span>
+    </a>
+    <nav class="nav-desktop" aria-label="ניווט ראשי">
+      <div class="tablist" role="tablist" id="tablist-desktop">
+        <span class="tab-indicator" aria-hidden="true"></span>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="view" id="view-about" role="tabpanel" aria-labelledby="tab-about" tabindex="-1"></section>
+  <section class="view" id="view-projects" role="tabpanel" aria-labelledby="tab-projects" tabindex="-1"></section>
+  <section class="view" id="view-support" role="tabpanel" aria-labelledby="tab-support" tabindex="-1"></section>
+  <section class="view" id="view-contact" role="tabpanel" aria-labelledby="tab-contact" tabindex="-1"></section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p id="footer-text"></p>
+    <p class="footer-meta">© <span id="footer-year"></span> <span id="footer-name"></span></p>
+  </div>
+</footer>
+
+<!-- Mobile: thumb-reachable bottom tab bar. -->
+<nav class="nav-mobile" aria-label="ניווט ראשי">
+  <div class="tablist" role="tablist" id="tablist-mobile"></div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/content.js"></script>
+<script src="assets/js/render.js"></script>
+<script src="assets/js/contact.js"></script>
+<script src="assets/js/motion.js"></script>
+<script src="assets/js/router.js"></script>
+</body>
+</html>

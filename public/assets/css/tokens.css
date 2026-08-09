@@ -1,0 +1,77 @@
+/* ==================== DESIGN TOKENS ====================
+ * Change a value here and it propagates everywhere.
+ * ======================================================= */
+
+:root {
+  /* ---- Surfaces ---- */
+  --bg-primary: #12101a;
+  --bg-elevated: #1a1725;
+  --bg-card: rgba(255, 255, 255, 0.045);
+  --bg-card-hover: rgba(255, 255, 255, 0.075);
+  --bg-glass: rgba(18, 16, 26, 0.72);
+
+  /* ---- Text ---- */
+  --text-primary: #f4f1f7;
+  --text-secondary: #c3bdd1;
+  --text-muted: #8a839c;
+
+  /* ---- Accents: warm, personal, not corporate-blue ---- */
+  --accent-primary: #ff8a5b;
+  --accent-secondary: #ff5f96;
+  --accent-tertiary: #a86bff;
+
+  --gradient-primary: linear-gradient(135deg, #ff9a56 0%, #ff5f96 50%, #a86bff 100%);
+  --gradient-warm: linear-gradient(120deg, #ffb066 0%, #ff6b9d 100%);
+  --gradient-text: linear-gradient(100deg, #ffb066 0%, #ff6b9d 45%, #b98bff 100%);
+
+  /* ---- Borders ---- */
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* ---- Radii ---- */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.44);
+  --shadow-glow: 0 12px 40px rgba(255, 95, 150, 0.28);
+
+  /* ---- Motion ----
+   * Durations are referenced by JS too (router reads --dur-med). */
+  --dur-fast: 180ms;
+  --dur-med: 320ms;
+  --dur-slow: 620ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Layout ---- */
+  --container-max: 1120px;
+  --section-padding: clamp(56px, 8vw, 104px);
+  --header-height: 68px;
+  --mobile-nav-height: 64px;
+
+  /* ---- Type scale (fluid) ---- */
+  --fs-display: clamp(2.4rem, 7vw, 4.4rem);
+  --fs-h1: clamp(1.9rem, 4.6vw, 2.9rem);
+  --fs-h2: clamp(1.45rem, 3vw, 1.95rem);
+  --fs-h3: clamp(1.1rem, 2vw, 1.28rem);
+  --fs-body: clamp(1rem, 1.5vw, 1.075rem);
+  --fs-sm: 0.92rem;
+  --fs-xs: 0.8rem;
+}
+
+/* Respect an explicit OS light-mode preference without a full second theme:
+   lift the surfaces just enough to stay readable in bright sun on a phone. */
+@media (prefers-contrast: more) {
+  :root {
+    --text-secondary: #ded9e8;
+    --text-muted: #b0a9c2;
+    --border-subtle: rgba(255, 255, 255, 0.2);
+  }
+}
