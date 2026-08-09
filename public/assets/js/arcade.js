@@ -1,0 +1,1178 @@
+/* ==================== ARCADE ====================
+ * A retro layer over the site:
+ *   - a small cast of 8-bit characters that stroll, drift down, peek out from
+ *     behind tabs and cards, and turn to look at the visitor or at a click
+ *   - a hammer tool that smashes words into pixels, and puts them back
+ *
+ * All sprites are ORIGINAL art stored as pixel grids in this file — no image
+ * files, no external requests, and no trademarked game characters.
+ *
+ * Two canvases:
+ *   .arcade-bg  z-index -1  cast, painted BEHIND page text (that's the "peek")
+ *   .arcade-fx  z-index 400 hammer debris, painted above everything
+ *
+ * prefers-reduced-motion: the whole feature is motion, so it is not built at
+ * all — no canvases, no controls, no loop.
+ * ================================================ */
+
+const Arcade = (() => {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const finePointer = matchMedia('(pointer: fine)').matches;
+
+  /* ---------- palette (drawn from tokens.css so the cast belongs here) ---------- */
+
+  const SILVER = '#d1d7e0';
+  const METAL = '#8b83a8';
+  const CORAL = '#ff8a5b';
+  const PINK = '#ff5f96';
+  const DARK = '#2d283e';
+  const GINGER = '#e09a6a';
+
+  /* ---------- the cast ----------
+   * Familiar arcade archetypes from the late 70s / early 80s, hand-drawn here
+   * as pixel grids. Each row is one pixel row; every character indexes `pal`,
+   * '0' = transparent. Rows must all be `w` characters long — buildSprite()
+   * throws on a mismatch rather than drawing something broken.
+   *
+   * NOTE: these designs are recognisable on purpose, at the site owner's
+   * explicit request. The originals are live trademarks of Bandai Namco,
+   * Taito and Nintendo. Swapping any entry here for an original design is a
+   * one-object change and needs no other edits. */
+
+  const GHOST_ROWS = [
+    '00011111000',
+    '00111111100',
+    '01111111110',
+    '11221112211',
+    '11231112311',
+    '11221112211',
+    '11111111111',
+    '11111111111',
+    '11111111111',
+    '11011011011',
+  ];
+
+  const SPRITES = {
+    // Maze-chase ghosts — same shape, two colourways.
+    ghostPink: { w: 11, h: 10, pal: ['', '#ff7ab8', '#ffffff', '#2b2b6b'], rows: GHOST_ROWS },
+    ghostCyan: { w: 11, h: 10, pal: ['', '#69e0ef', '#ffffff', '#2b2b6b'], rows: GHOST_ROWS },
+
+    // The dot-muncher, wedge open.
+    muncher: {
+      w: 9, h: 9, pal: ['', '#ffd93d'],
+      rows: [
+        '001111100',
+        '011111110',
+        '111111000',
+        '111110000',
+        '111100000',
+        '111110000',
+        '111111000',
+        '011111110',
+        '001111100',
+      ],
+    },
+
+    // Descending crab alien.
+    invader: {
+      w: 11, h: 8, pal: ['', '#7ee081'],
+      rows: [
+        '00100000100',
+        '00010001000',
+        '00111111100',
+        '01101110110',
+        '11111111111',
+        '10111111101',
+        '10100000101',
+        '00011011000',
+      ],
+    },
+
+    // Moustachioed jumping man.
+    plumber: {
+      w: 9, h: 11, pal: ['', '#e34b3a', '#f2c49b', '#3f6fd6', '#2d283e'],
+      rows: [
+        '001111100',
+        '011111110',
+        '042222240',
+        '022222220',
+        '024444420',
+        '002222200',
+        '113333311',
+        '113333311',
+        '033333330',
+        '033003300',
+        '044004400',
+      ],
+    },
+
+    // Top-row squid — the small, fast one.
+    invaderSquid: {
+      w: 8, h: 8, pal: ['', '#69e0ef'],
+      rows: [
+        '00011000',
+        '00111100',
+        '01111110',
+        '11011011',
+        '11111111',
+        '00100100',
+        '01011010',
+        '10100101',
+      ],
+    },
+
+    // Bottom-row octopus — the wide, slow one.
+    invaderOcto: {
+      w: 12, h: 8, pal: ['', '#ffb066'],
+      rows: [
+        '000011110000',
+        '011111111110',
+        '111111111111',
+        '111001100111',
+        '111111111111',
+        '001110011100',
+        '011001100110',
+        '110000000011',
+      ],
+    },
+
+    // The mystery ship that slides across the top for bonus points.
+    ufo: {
+      w: 13, h: 6, pal: ['', '#ff5f96', '#ffd93d'],
+      rows: [
+        '0000111110000',
+        '0011111111100',
+        '0111111111110',
+        '1111111111111',
+        '0112112112110',
+        '0010000000100',
+      ],
+    },
+
+    // Road-crossing frog.
+    frog: {
+      w: 11, h: 8, pal: ['', '#5cd65c', '#2d283e'],
+      rows: [
+        '01000000010',
+        '01100000110',
+        '01210001210',
+        '00111111100',
+        '01111111110',
+        '11111111111',
+        '11011111011',
+        '11000000011',
+      ],
+    },
+
+    // Player ship from the fixed shooters.
+    ship: {
+      w: 11, h: 8, pal: ['', SILVER, PINK],
+      rows: [
+        '00000100000',
+        '00001110000',
+        '00011111000',
+        '00111211100',
+        '01111211110',
+        '11111111111',
+        '11011111011',
+        '10000000001',
+      ],
+    },
+
+    // ---- ground crew: these two always patrol the bottom of the page ----
+
+    // The acrobat prince — white tunic, red sash.
+    prince: {
+      w: 9, h: 12, pal: ['', '#f2ede4', '#2d283e', '#e8b07a', '#c9443a'],
+      rows: [
+        '002222200',
+        '023333320',
+        '023333320',
+        '002333200',
+        '011111110',
+        '311111113',
+        '011111110',
+        '044444440',
+        '011111110',
+        '011001100',
+        '011001100',
+        '022002200',
+      ],
+    },
+
+    // The armoured cop — visor across the helmet, heavy shoulders.
+    robocop: {
+      w: 9, h: 12, pal: ['', '#8f98a8', '#2b3350', '#5b6478'],
+      rows: [
+        '001111100',
+        '011111110',
+        '012222210',
+        '011111110',
+        '111111111',
+        '113111311',
+        '011111110',
+        '012111210',
+        '011111110',
+        '011001100',
+        '011001100',
+        '022002200',
+      ],
+    },
+
+    // The alley cat. These five grids were traced automatically from the
+    // game's own walk/sit frames (the source JPEGs were deleted once traced —
+    // the grids below are the only copy). The cat was the only black in those
+    // images, so an "all channels low" test isolated the silhouette; a
+    // luminance test does not, since the magenta background sits at ~82.
+    // All frames share one scale and are bottom/right-aligned, so the head
+    // stays put while the legs and tail move and the cat never changes size.
+    // Orange rather than the original's black, by request — and it reads far
+    // better than black on the #2d283e background.
+    // Frames 0-2 walk, 3-4 sit.
+    cat: {
+      w: 17, h: 9, pal: ['', '#f0913c'],
+      frames: [
+        [ // walk1
+          '00000000000000000',
+          '00100000000001100',
+          '00010000000001110',
+          '00110011110011111',
+          '00011111111111110',
+          '00001111111111110',
+          '00001111111111100',
+          '00011001100101100',
+          '00010001101100100',
+        ],
+        [ // walk2
+          '00000000000000000',
+          '00000000000000000',
+          '10000000000001100',
+          '10000000110001110',
+          '01100111111111111',
+          '00111111111111110',
+          '00011111000111100',
+          '00011110000111100',
+          '00011110000000110',
+        ],
+        [ // walk3
+          '00000000000000000',
+          '00000000000000000',
+          '10000000000001100',
+          '01100000111011110',
+          '00110111111111111',
+          '00011111111111110',
+          '00001111111111000',
+          '00000111000110000',
+          '00000110000110000',
+        ],
+        [ // sit1
+          '00000000000100110',
+          '00000000000111110',
+          '00000000001111111',
+          '00000000000111110',
+          '00000000000111100',
+          '00000001001111110',
+          '00000000111111110',
+          '00000000011111110',
+          '00000000011111101',
+        ],
+        [ // sit2
+          '00000000000110110',
+          '00000000000111110',
+          '00000000001111111',
+          '00000000000111110',
+          '00000000000111100',
+          '00000001111111110',
+          '00000001011111110',
+          '00000000011111110',
+          '00000000011111111',
+        ],
+      ],
+    },
+  };
+
+  // These patrol the bottom of the page permanently, so they're excluded from
+  // the random wanderer pool.
+  const GROUND_CREW = ['prince', 'robocop', 'plumber', 'cat'];
+  const NAMES = Object.keys(SPRITES).filter((n) => !GROUND_CREW.includes(n));
+  const PX = 3; // one sprite pixel = 3 CSS px
+
+  /* ---------- state ---------- */
+
+  const dpr = () => Math.min(devicePixelRatio || 1, 2);
+
+  let bgCanvas, fxCanvas, bgCtx, fxCtx;
+  let controls = null;
+  let arcadeOn = true;
+  let hammerOn = false;
+
+  const cast = [];
+  const particles = [];
+  const smashed = new Map(); // element -> particle[]
+  const spriteCache = new Map();
+  const glyphCache = new Map();
+
+  // False until the canvases exist. init() returns early under reduced motion
+  // or when the layer is disabled, and the router still calls onRouteChange(),
+  // so every entry point has to check this before touching a context.
+  let ready = false;
+  let rafId = null;
+  let lastT = 0;
+  let spawnTimer = 0;
+  let pointer = { x: -1e4, y: -1e4 };
+  let restoring = false;
+
+  const DENSITY = { calm: 2, normal: 4, busy: 6 };
+  let maxCast = 4;
+  const MAX_PARTICLES = 4000;
+  const MAX_CHARS = 240;
+
+  /* ---------- sprite rasterisation ---------- */
+
+  // A sprite is either a single grid (`rows`) or an animation (`frames`).
+  const framesOf = (def) => def.frames || [def.rows];
+
+  function buildSprite(name, fi = 0) {
+    const key = `${name}#${fi}`;
+    if (spriteCache.has(key)) return spriteCache.get(key);
+    const def = SPRITES[name];
+    const rows = framesOf(def)[fi] || framesOf(def)[0];
+    const scale = PX * dpr();
+    const c = document.createElement('canvas');
+    c.width = def.w * scale;
+    c.height = def.h * scale;
+    const g = c.getContext('2d');
+
+    rows.forEach((row, y) => {
+      if (row.length !== def.w) {
+        throw new Error(`sprite "${name}" frame ${fi} row ${y} is ${row.length} px, expected ${def.w}`);
+      }
+      for (let x = 0; x < def.w; x++) {
+        const colour = def.pal[+row[x]];
+        if (!colour) continue;
+        g.fillStyle = colour;
+        g.fillRect(x * scale, y * scale, scale, scale);
+      }
+    });
+
+    const built = { canvas: c, w: def.w * PX, h: def.h * PX };
+    spriteCache.set(key, built);
+    return built;
+  }
+
+  /* Which frame to draw. Only the cat is animated: it walks through frames
+   * 0-2, holds frame 1 (legs extended) while airborne, and cycles the two
+   * sitting poses when resting. */
+  const CAT_AIR_FRAME = 1;
+  function frameFor(s) {
+    if (s.name !== 'cat') return 0;
+    if (s.sitting) return 3 + (Math.floor(s.anim * 1.2) % 2);
+    if (s.vy !== 0) return CAT_AIR_FRAME;
+    return Math.floor(s.anim * 7) % 3;
+  }
+
+  /* ---------- canvases ---------- */
+
+  function makeCanvas(cls) {
+    const c = document.createElement('canvas');
+    c.className = cls;
+    c.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(c);
+    return c;
+  }
+
+  function sizeCanvases() {
+    const r = dpr();
+    [bgCanvas, fxCanvas].forEach((c) => {
+      c.width = Math.floor(innerWidth * r);
+      c.height = Math.floor(innerHeight * r);
+      c.style.width = `${innerWidth}px`;
+      c.style.height = `${innerHeight}px`;
+      const ctx = c.getContext('2d');
+      ctx.setTransform(r, 0, 0, r, 0, 0);
+      ctx.imageSmoothingEnabled = false; // keep pixel edges crisp
+    });
+    spriteCache.clear(); // rebuilt at the new DPR on next draw
+  }
+
+  /* ---------- the cast ---------- */
+
+  function anchors() {
+    const sel = '.tab, .card, .section-head h2, .site-header, .hero-actions .btn';
+    return [...document.querySelectorAll(sel)].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 40 && r.height > 18 &&
+             r.bottom > 60 && r.top < innerHeight - 40;
+    });
+  }
+
+  /* ---------- ground crew ----------
+   * The prince and the cop walk the bottom of the viewport and jump now and
+   * then. Unlike the wanderers they turn at the edges instead of leaving, so
+   * they're always there. Smash one and it walks back on at the next spawn
+   * tick, which gives a natural couple of seconds before it returns. */
+
+  /* ---------- platforms ----------
+   * Real page elements the cat can land on. Recomputed on a timer rather than
+   * per frame: getBoundingClientRect on a dozen nodes every frame would force
+   * layout 60x a second. */
+
+  let platforms = [];
+  let platformTimer = 0;
+
+  function refreshPlatforms() {
+    const sel = '.card, .btn, .section-head h2, .hero-portrait, .handle-box, ' +
+                '.eyebrow, .hero-tagline, .about-body p, .timeline-item, .tag';
+    platforms = [...document.querySelectorAll(sel)]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width > 60 && r.top > 70 && r.top < innerHeight - 90)
+      .map((r) => ({ top: r.top, left: r.left, right: r.right }));
+  }
+
+  function groundY(h) {
+    // Clear the mobile tab bar; on desktop that bar isn't rendered.
+    const navPad = innerWidth < 861 ? 64 : 0;
+    return innerHeight - h - navPad - 6;
+  }
+
+  function ensureGroundCrew() {
+    GROUND_CREW.forEach((name, i) => {
+      if (cast.some((s) => s.name === name)) return;
+      const sp = buildSprite(name);
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      // Start each one in its own band so they don't appear in a clump.
+      const band = Math.max(1, (innerWidth - sp.w - 40) / GROUND_CREW.length);
+      cast.push({
+        name, w: sp.w, h: sp.h,
+        state: name === 'cat' ? 'cat' : 'ground',
+        x: 20 + band * i + Math.random() * band * 0.6,
+        y: groundY(sp.h),
+        groundY: groundY(sp.h),
+        vx: dir * (name === 'cat' ? 34 + Math.random() * 20 : 26 + Math.random() * 16),
+        vy: 0,
+        face: dir, bob: 0, life: 0, hop: 0, hold: 0,
+        jumpT: 1.5 + Math.random() * 3,
+        seek: null, seekT: 0, anim: 0,
+        sitting: false, sitT: 4 + Math.random() * 5,
+        dead: false,
+      });
+    });
+  }
+
+  function spawn() {
+    // Ground crew never counts against the wanderer cap, or they'd starve it.
+    if (cast.filter((s) => s.state !== 'ground').length >= maxCast) return;
+
+    const name = NAMES[(Math.random() * NAMES.length) | 0];
+    const s = buildSprite(name);
+    const roll = Math.random();
+    const sprite = {
+      name, w: s.w, h: s.h,
+      face: 1, bob: 0, life: 0,
+      vx: 0, vy: 0, hop: 0,
+      state: 'stroll', hold: 0, dead: false,
+    };
+
+    if (roll < 0.34) {
+      // fall — drift down from above with a slow sway
+      sprite.state = 'fall';
+      sprite.x = 40 + Math.random() * (innerWidth - 120);
+      sprite.y = -sprite.h - Math.random() * 120;
+      sprite.vy = 14 + Math.random() * 14;
+      sprite.sway = 0.6 + Math.random() * 0.8;
+      sprite.swayT = Math.random() * 6;
+    } else if (roll < 0.7) {
+      // peek — hide behind an anchor and lean out over its top edge
+      const list = anchors();
+      if (!list.length) return;
+      const a = list[(Math.random() * list.length) | 0].getBoundingClientRect();
+      sprite.state = 'peek';
+      sprite.x = a.left + 12 + Math.random() * Math.max(1, a.width - sprite.w - 24);
+      sprite.baseY = a.top - 2;          // just behind the anchor's top edge
+      sprite.y = sprite.baseY;
+      sprite.peekT = 0;
+      sprite.peekRise = sprite.h * (0.55 + Math.random() * 0.25);
+      sprite.hold = 1.6 + Math.random() * 2.2;
+      sprite.face = Math.random() < 0.5 ? 1 : -1;
+    } else {
+      // stroll — walk across a random band
+      sprite.state = 'stroll';
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      sprite.face = dir;
+      sprite.x = dir === 1 ? -sprite.w - 10 : innerWidth + 10;
+      sprite.y = 90 + Math.random() * Math.max(40, innerHeight - 220);
+      sprite.vx = dir * (18 + Math.random() * 22);
+      sprite.pause = 2 + Math.random() * 4;
+    }
+
+    cast.push(sprite);
+  }
+
+  function stepCast(dt) {
+    for (let i = cast.length - 1; i >= 0; i--) {
+      const s = cast[i];
+      s.life += dt;
+      s.bob += dt * 6;
+      s.anim = (s.anim || 0) + dt;
+
+      if (s.hop > 0) s.hop = Math.max(0, s.hop - dt * 3);
+
+      if (s.state === 'stroll') {
+        s.pause -= dt;
+        if (s.pause <= 0) {
+          // stop and look around for a beat, then carry on
+          s.pause = 2 + Math.random() * 4;
+          s.resting = !s.resting;
+        }
+        if (!s.resting) s.x += s.vx * dt;
+        if (s.x < -s.w - 40 || s.x > innerWidth + 40) s.dead = true;
+
+      } else if (s.state === 'fall') {
+        s.y += s.vy * dt;
+        s.swayT += dt;
+        s.x += Math.sin(s.swayT * s.sway) * 14 * dt;
+        if (s.y > innerHeight + s.h) s.dead = true;
+
+      } else if (s.state === 'cat') {
+        // Walks the page, hops onto whatever content is within reach, and
+        // falls back to the floor when it runs off an edge.
+        const CAT_G = 1000;
+        // Measured on the About tab: the lowest content sits ~360px above the
+        // floor, so a "realistic" 190px hop could never reach anything. This
+        // is a big arcade leap on purpose.
+        const CAT_MAXV = 940;
+        const CAT_REACH = (CAT_MAXV * CAT_MAXV) / (2 * CAT_G) - 20; // ~420px
+
+        // Pick something to climb and walk toward it. Without this the cat only
+        // jumps when a platform happens to be overhead, which almost never
+        // lines up — airtime is ~1s and it drifts barely 30px sideways.
+        // Sit / walk cycle. While sitting it holds still and does not climb.
+        s.sitT -= dt;
+        if (s.sitT <= 0) {
+          s.sitting = !s.sitting;
+          s.sitT = s.sitting ? (2.5 + Math.random() * 3.5) : (5 + Math.random() * 6);
+          if (!s.sitting) s.vx = Math.sign(s.vx || 1) * (34 + Math.random() * 20);
+        }
+        // Time spent off the floor. Without this the cat happily hops between
+        // platforms forever and never comes back down.
+        const onFloor = Math.abs(s.y - groundY(s.h)) < 4;
+        s.upT = onFloor ? 0 : (s.upT || 0) + dt;
+        s.descend = s.upT > 7;
+        if (onFloor) s.descend = false;
+
+        s.seekT -= dt;
+        if (s.sitting || s.descend) s.seek = null;
+        else if (!s.seek || s.seekT <= 0) {
+          const f = s.y + s.h;
+          const reachable = platforms.filter((pf) => {
+            const dy = f - pf.top;
+            return dy > 18 && dy < CAT_REACH;
+          });
+          s.seek = reachable.length ? reachable[(Math.random() * reachable.length) | 0] : null;
+          s.seekT = 4 + Math.random() * 4;
+        }
+        if (s.seek) {
+          const cxNow = s.x + s.w / 2;
+          const aim = (s.seek.left + s.seek.right) / 2;
+          if (Math.abs(aim - cxNow) > 8) s.vx = Math.sign(aim - cxNow) * Math.abs(s.vx);
+        }
+
+        if (!s.sitting) s.x += s.vx * dt;
+        if (s.x <= 4) { s.x = 4; s.vx = Math.abs(s.vx); }
+        else if (s.x >= innerWidth - s.w - 4) { s.x = innerWidth - s.w - 4; s.vx = -Math.abs(s.vx); }
+        if (!s.sitting) s.face = s.vx > 0 ? 1 : -1;
+
+        const prevFeet = s.y + s.h;
+        s.vy += CAT_G * dt;
+        s.y += s.vy * dt;
+        const feet = s.y + s.h;
+
+        // Landing is re-derived every frame from the live platform list, so
+        // walking off an edge (or the element scrolling away) drops the cat
+        // with no extra bookkeeping.
+        if (s.vy >= 0 && !s.descend) {
+          const cx = s.x + s.w / 2;
+          let best = null;
+          for (const pf of platforms) {
+            if (cx < pf.left || cx > pf.right) continue;
+            if (prevFeet <= pf.top + 2 && feet >= pf.top - 0.5) {
+              if (!best || pf.top < best.top) best = pf;
+            }
+          }
+          if (best) { s.y = best.top - s.h; s.vy = 0; s.landed = true; }
+        }
+
+        const gy = groundY(s.h);
+        if (s.y >= gy) { s.y = gy; s.vy = 0; s.landed = true; }
+
+        if (s.landed && s.jumping) {
+          s.jumping = false;
+          s.vx = Math.sign(s.vx || 1) * (34 + Math.random() * 20);
+        }
+        s.landed = false;
+
+        // Sitting is only valid on a surface. This has to run AFTER the
+        // integration above: if the platform vanished this frame the cat is
+        // already falling, and checking earlier would draw a sitting pose
+        // mid-air for one frame.
+        if (s.sitting && s.vy !== 0) { s.sitting = false; s.sitT = 4 + Math.random() * 4; }
+
+        if (s.vy === 0 && !s.sitting) {
+          s.jumpT -= dt;
+          if (s.jumpT <= 0) {
+            // Leap only when actually underneath something reachable, using
+            // exactly the velocity needed to clear it; otherwise a small idle
+            // hop. Once it lands, the seek target is cleared so it moves on.
+            const cx = s.x + s.w / 2;
+            let target = null;
+            // While heading home it refuses to climb, so walking off the edge
+            // of whatever it's on drops it back toward the floor.
+            if (!s.descend) {
+              for (const pf of platforms) {
+                const dy = feet - pf.top;
+                if (dy < 18 || dy > CAT_REACH) continue;               // not above / too high
+                if (cx < pf.left - 12 || cx > pf.right + 12) continue; // not underneath
+                if (!target || dy < target.dy) target = { dy };
+              }
+            }
+            if (target) {
+              s.vy = -Math.sqrt(2 * CAT_G * (target.dy + 14));
+              // Airtime is ~1.8s at this height; at walking speed the cat would
+              // sail straight past the platform, so slow it for the ascent and
+              // restore the pace on landing.
+              s.jumping = true;
+              s.vx = Math.sign(s.vx || 1) * 10;
+              s.seek = null;                 // climbed it — pick a new goal next
+              s.seekT = 3 + Math.random() * 3;
+            } else {
+              s.vy = -(280 + Math.random() * 150);
+            }
+            s.jumpT = 1.2 + Math.random() * 2.2;
+          }
+        }
+
+      } else if (s.state === 'ground') {
+        s.x += s.vx * dt;
+        // Turn at the edges rather than walking off.
+        if (s.x <= 4) { s.x = 4; s.vx = Math.abs(s.vx); }
+        else if (s.x >= innerWidth - s.w - 4) { s.x = innerWidth - s.w - 4; s.vx = -Math.abs(s.vx); }
+        s.face = s.vx > 0 ? 1 : -1;
+
+        // Jump on a timer; only while actually on the ground.
+        if (s.vy === 0) {
+          s.jumpT -= dt;
+          if (s.jumpT <= 0) { s.vy = -250; s.jumpT = 1.8 + Math.random() * 3.4; }
+        }
+        if (s.vy !== 0) {
+          s.vy += 700 * dt;
+          s.y += s.vy * dt;
+          if (s.y >= s.groundY) { s.y = s.groundY; s.vy = 0; }
+        }
+
+      } else if (s.state === 'peek') {
+        s.peekT += dt;
+        // rise out, hold, drop back behind the anchor
+        const rise = s.peekRise;
+        if (s.peekT < 0.6) {
+          s.y = s.baseY - rise * (s.peekT / 0.6);
+        } else if (s.peekT < 0.6 + s.hold) {
+          s.y = s.baseY - rise;
+        } else if (s.peekT < 1.2 + s.hold) {
+          s.y = s.baseY - rise * (1 - (s.peekT - 0.6 - s.hold) / 0.6);
+        } else {
+          s.dead = true;
+        }
+      }
+
+      // Look toward the cursor while idle (fine pointers only). The ground crew
+      // is excluded — they must face the way they walk, or they moonwalk.
+      if (finePointer && pointer.x > -1e3 && s.state !== 'ground' && s.state !== 'cat') {
+        const dx = pointer.x - (s.x + s.w / 2);
+        if (Math.abs(dx) > 24 && (s.state !== 'stroll' || s.resting)) {
+          s.face = dx > 0 ? 1 : -1;
+        }
+      }
+
+      if (s.dead) cast.splice(i, 1);
+    }
+  }
+
+  function drawCast() {
+    for (const s of cast) {
+      const sp = buildSprite(s.name, frameFor(s));
+      const walking = (s.state === 'stroll' && !s.resting) ||
+                      ((s.state === 'ground' || s.state === 'cat') && s.vy === 0);
+      const bob = walking ? Math.round(Math.sin(s.bob) * 1.5) : 0;
+      const hop = s.hop > 0 ? -Math.sin(s.hop * Math.PI) * 10 : 0;
+
+      bgCtx.save();
+      bgCtx.translate(Math.round(s.x + sp.w / 2), Math.round(s.y + bob + hop));
+      bgCtx.scale(s.face, 1);
+      bgCtx.drawImage(sp.canvas, Math.round(-sp.w / 2), 0, sp.w, sp.h);
+      bgCtx.restore();
+    }
+  }
+
+  // A click anywhere makes the nearest characters turn and hop toward it.
+  function reactTo(x, y) {
+    const near = cast
+      .map((s) => ({ s, d: Math.hypot(s.x + s.w / 2 - x, s.y + s.h / 2 - y) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 2);
+    for (const { s } of near) {
+      s.face = x > s.x + s.w / 2 ? 1 : -1;
+      s.hop = 1;
+      if (s.state === 'stroll') s.resting = true;
+    }
+  }
+
+  /* ---------- hammer: words -> pixels ---------- */
+
+  const BREAKABLE = [
+    'h1', 'h2', 'h3', 'h4', 'p', 'label',
+    '.tag', '.eyebrow', '.tab', '.timeline-year', '.gradient-text',
+    '.brand-text', '.hero-greeting', '.s-note', '.project-more',
+  ].join(',');
+
+  // Sample one glyph's ink so the word breaks along its real letterforms
+  // instead of into rectangles. Cached per char+font+size.
+  function glyphPixels(ch, font, w, h, step) {
+    const key = `${ch}|${font}|${Math.round(w)}x${Math.round(h)}|${step}`;
+    if (glyphCache.has(key)) return glyphCache.get(key);
+
+    const cw = Math.max(1, Math.ceil(w));
+    const chh = Math.max(1, Math.ceil(h));
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = chh;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.font = font;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#fff';
+    g.fillText(ch, cw / 2, chh / 2);
+
+    const pts = [];
+    try {
+      const data = g.getImageData(0, 0, cw, chh).data;
+      for (let y = 0; y < chh; y += step) {
+        for (let x = 0; x < cw; x += step) {
+          if (data[(y * cw + x) * 4 + 3] > 128) pts.push([x, y]);
+        }
+      }
+    } catch {
+      // getImageData unavailable — fall back to filling the character box
+      for (let y = 0; y < chh; y += step) {
+        for (let x = 0; x < cw; x += step) pts.push([x, y]);
+      }
+    }
+    glyphCache.set(key, pts);
+    return pts;
+  }
+
+  function inkColour(el) {
+    const cs = getComputedStyle(el);
+    const c = cs.color;
+    // .gradient-text paints via background-clip, so its colour is transparent.
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (m) {
+      const parts = m[1].split(',').map((n) => parseFloat(n));
+      if (parts.length > 3 && parts[3] === 0) return CORAL;
+    }
+    return c;
+  }
+
+  function smash(el) {
+    if (smashed.has(el)) return false;
+
+    const cs = getComputedStyle(el);
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const colour = inkColour(el);
+    const size = Math.max(2, Math.round(parseFloat(cs.fontSize) / 9));
+    const step = Math.max(3, size + 1);
+
+    // Collect every visible character with its exact on-screen box. Using Range
+    // rects means wrapping, RTL and letter-spacing are already accounted for.
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const made = [];
+    let count = 0;
+    let node;
+
+    while ((node = walker.nextNode()) && count < MAX_CHARS) {
+      const text = node.nodeValue;
+      for (let i = 0; i < text.length && count < MAX_CHARS; i++) {
+        const ch = text[i];
+        if (!ch.trim()) continue;
+        const range = document.createRange();
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        if (r.width < 0.5 || r.height < 0.5) continue;
+        count++;
+
+        for (const [gx, gy] of glyphPixels(ch, font, r.width, r.height, step)) {
+          if (particles.length >= MAX_PARTICLES) break;
+          const px = r.left + gx + scrollX;
+          const py = r.top + gy + scrollY;
+          const p = {
+            x: px, y: py, ox: px, oy: py,
+            vx: (Math.random() - 0.5) * 260,
+            vy: -80 - Math.random() * 220,
+            size, colour, el, settled: false,
+            floor: scrollY + innerHeight - 4,
+          };
+          particles.push(p);
+          made.push(p);
+        }
+      }
+    }
+
+    if (!made.length) return false;
+    smashed.set(el, made);
+    el.classList.add('smashed');
+    return true;
+  }
+
+  /* ---------- smashing a character ----------
+   * The sprite grid is already pixel data, so its own pixels become the
+   * debris — a hit looks like the character coming apart, not a generic burst.
+   * These particles are marked transient: they tween home like everything else
+   * on restore, but there is no element to un-hide, so they simply clear. */
+
+  function hitTestCast(x, y) {
+    for (let i = cast.length - 1; i >= 0; i--) {
+      const s = cast[i];
+      if (x >= s.x - 6 && x <= s.x + s.w + 6 &&
+          y >= s.y - 6 && y <= s.y + s.h + 6) return i;
+    }
+    return -1;
+  }
+
+  function explodeSprite(index) {
+    const s = cast[index];
+    const def = SPRITES[s.name];
+    const rows = framesOf(def)[frameFor(s)] || framesOf(def)[0];
+    cast.splice(index, 1);
+
+    for (let gy = 0; gy < def.h; gy++) {
+      for (let gx = 0; gx < def.w; gx++) {
+        const colour = def.pal[+rows[gy][gx]];
+        if (!colour || particles.length >= MAX_PARTICLES) continue;
+        // Mirror the grid when the character faces the other way.
+        const localX = s.face === 1 ? gx : def.w - 1 - gx;
+        const px = s.x + localX * PX + scrollX;
+        const py = s.y + gy * PX + scrollY;
+        particles.push({
+          x: px, y: py, ox: px, oy: py,
+          vx: (localX - def.w / 2) * 26 + (Math.random() - 0.5) * 90,
+          vy: -110 - Math.random() * 170,
+          size: PX, colour, el: null, transient: true, settled: false,
+          floor: scrollY + innerHeight - 4,
+        });
+      }
+    }
+    shock(s.x + s.w / 2, s.y + s.h / 2);
+    return true;
+  }
+
+  /* ---------- impact shockwave ---------- */
+
+  const shocks = [];
+  function shock(x, y) { shocks.push({ x, y, t: 0 }); }
+
+  function stepShocks(dt) {
+    for (let i = shocks.length - 1; i >= 0; i--) {
+      shocks[i].t += dt;
+      if (shocks[i].t > 0.32) shocks.splice(i, 1);
+    }
+  }
+
+  function drawShocks() {
+    for (const s of shocks) {
+      const k = s.t / 0.32;
+      const r = 6 + k * 34;
+      fxCtx.globalAlpha = 1 - k;
+      fxCtx.strokeStyle = SILVER;
+      fxCtx.lineWidth = 3;
+      // Square ring rather than a circle — reads as pixel art, not a bubble.
+      fxCtx.strokeRect(Math.round(s.x - r), Math.round(s.y - r), Math.round(r * 2), Math.round(r * 2));
+      fxCtx.globalAlpha = 1;
+    }
+  }
+
+  function stepParticles(dt) {
+    if (restoring) return;
+    for (const p of particles) {
+      if (p.settled) continue;
+      p.vy += 900 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.y >= p.floor) {
+        p.y = p.floor;
+        p.vy = 0;
+        p.vx *= 0.72;
+        if (Math.abs(p.vx) < 4) p.settled = true;
+      }
+    }
+  }
+
+  function drawParticles() {
+    const ox = scrollX;
+    const oy = scrollY;
+    for (const p of particles) {
+      fxCtx.fillStyle = p.colour;
+      fxCtx.fillRect(Math.round(p.x - ox), Math.round(p.y - oy), p.size, p.size);
+    }
+  }
+
+  // Putting the hammer away tweens every pixel home, then un-hides the text.
+  function restoreAll() {
+    if (!particles.length) { smashed.clear(); return; }
+    restoring = true;
+    const start = performance.now();
+    const from = particles.map((p) => ({ p, x: p.x, y: p.y }));
+    const DUR = 600;
+
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / DUR);
+      const e = 1 - Math.pow(1 - t, 3); // ease-out-cubic
+      for (const f of from) {
+        f.p.x = f.x + (f.p.ox - f.x) * e;
+        f.p.y = f.y + (f.p.oy - f.y) * e;
+      }
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        for (const el of smashed.keys()) el.classList.remove('smashed');
+        smashed.clear();
+        particles.length = 0;
+        restoring = false;
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- controls ---------- */
+
+  const ICON = {
+    hammer: '<path d="M14 3l7 7-3 3-2-2-8 8-3-3 8-8-2-2z"/>',
+    joy: '<rect x="3" y="9" width="18" height="11" rx="3"/><path d="M8 14h3M9.5 12.5v3M16 14h.01M18 16h.01M12 9V6a3 3 0 0 1 3-3"/>',
+  };
+
+  function svg(path) {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  }
+
+  function buildControls(labels) {
+    controls = document.createElement('div');
+    controls.className = 'arcade-ctl';
+
+    const castBtn = document.createElement('button');
+    castBtn.type = 'button';
+    castBtn.className = 'arcade-btn';
+    castBtn.id = 'arcade-toggle';
+    castBtn.innerHTML = `${svg(ICON.joy)}<span>${labels.cast}</span>`;
+
+    const hammerBtn = document.createElement('button');
+    hammerBtn.type = 'button';
+    hammerBtn.className = 'arcade-btn';
+    hammerBtn.id = 'hammer-toggle';
+    hammerBtn.innerHTML = `${svg(ICON.hammer)}<span>${labels.hammer}</span>`;
+
+    const syncCast = () => {
+      castBtn.setAttribute('aria-pressed', String(arcadeOn));
+      castBtn.setAttribute('aria-label', arcadeOn ? labels.castOn : labels.castOff);
+    };
+    const syncHammer = () => {
+      hammerBtn.setAttribute('aria-pressed', String(hammerOn));
+      hammerBtn.setAttribute('aria-label', hammerOn ? labels.hammerOn : labels.hammer);
+      document.body.classList.toggle('hammer-on', hammerOn);
+    };
+
+    castBtn.addEventListener('click', () => {
+      arcadeOn = !arcadeOn;
+      try { localStorage.setItem('arcade:on', arcadeOn ? '1' : '0'); } catch {}
+      if (!arcadeOn) cast.length = 0;
+      syncCast();
+      kick();
+    });
+
+    hammerBtn.addEventListener('click', () => {
+      hammerOn = !hammerOn;
+      syncHammer();
+      if (!hammerOn) restoreAll();
+      kick();
+    });
+
+    controls.append(castBtn, hammerBtn);
+    document.body.appendChild(controls);
+    syncCast();
+    syncHammer();
+  }
+
+  /* ---------- loop ---------- */
+
+  function busy() {
+    return arcadeOn || particles.length > 0 || shocks.length > 0 || restoring;
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000 || 0);
+    lastT = now;
+
+    if (arcadeOn && !document.hidden) {
+      platformTimer -= dt;
+      if (platformTimer <= 0) { platformTimer = 0.4; refreshPlatforms(); }
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnTimer = 1.4 + Math.random() * 3.2;
+        ensureGroundCrew(); // brings back anyone who got smashed
+        spawn();
+      }
+      stepCast(dt);
+    }
+    stepParticles(dt);
+    stepShocks(dt);
+
+    bgCtx.clearRect(0, 0, innerWidth, innerHeight);
+    fxCtx.clearRect(0, 0, innerWidth, innerHeight);
+    if (arcadeOn) drawCast();
+    if (particles.length) drawParticles();
+    if (shocks.length) drawShocks();
+
+    rafId = busy() ? requestAnimationFrame(frame) : null;
+  }
+
+  function kick() {
+    if (!ready) return;
+    if (rafId == null && busy()) {
+      lastT = performance.now();
+      rafId = requestAnimationFrame(frame);
+    }
+  }
+
+  /* ---------- init ---------- */
+
+  function init() {
+    if (reduced) return; // the entire feature is motion
+
+    const cfg = (typeof SITE_CONTENT !== 'undefined' && SITE_CONTENT.arcade) || {};
+    if (cfg.enabled === false) return;
+
+    maxCast = DENSITY[cfg.density] || DENSITY.normal;
+    if (innerWidth < 861) maxCast = Math.max(2, maxCast - 2);
+
+    try {
+      const saved = localStorage.getItem('arcade:on');
+      if (saved !== null) arcadeOn = saved === '1';
+    } catch {}
+
+    bgCanvas = makeCanvas('arcade-bg');
+    fxCanvas = makeCanvas('arcade-fx');
+    bgCtx = bgCanvas.getContext('2d');
+    fxCtx = fxCanvas.getContext('2d');
+    sizeCanvases();
+
+    buildControls(cfg.labels || {
+      cast: 'דמויות', castOn: 'הדמויות פעילות', castOff: 'הדמויות כבויות',
+      hammer: 'פטיש', hammerOn: 'הפטיש פעיל',
+    });
+
+    addEventListener('resize', () => {
+      sizeCanvases();
+      if (innerWidth < 861) maxCast = Math.max(2, (DENSITY[cfg.density] || 4) - 2);
+      else maxCast = DENSITY[cfg.density] || DENSITY.normal;
+      // The floor moved, and on mobile the tab bar changes the clearance.
+      for (const s of cast) {
+        if (s.state !== 'ground') continue;
+        s.groundY = groundY(s.h);
+        if (s.vy === 0) s.y = s.groundY;
+        s.x = Math.min(s.x, Math.max(4, innerWidth - s.w - 4));
+      }
+    }, { passive: true });
+
+    if (finePointer) {
+      addEventListener('pointermove', (e) => {
+        pointer.x = e.clientX; pointer.y = e.clientY;
+      }, { passive: true });
+    }
+
+    // Hammer runs in the capture phase so smashing a tab doesn't also navigate.
+    document.addEventListener('click', (e) => {
+      if (!hammerOn) return;
+      if (e.target.closest('.arcade-ctl')) return;
+
+      // Characters are tested first: they're small and drawn behind the page,
+      // so if one is under the cursor that's plainly what you were aiming at.
+      const hit = hitTestCast(e.clientX, e.clientY);
+      if (hit !== -1) {
+        e.preventDefault();
+        e.stopPropagation();
+        explodeSprite(hit);
+        kick();
+        return;
+      }
+
+      const el = e.target.closest(BREAKABLE);
+      if (!el || el.closest('.arcade-ctl')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // Shockwaves are viewport-space (they live ~0.3s, so scrolling is moot).
+      if (smash(el)) {
+        shock(e.clientX, e.clientY);
+        kick();
+      }
+    }, true);
+
+    // Characters react to where you pressed.
+    document.addEventListener('click', (e) => {
+      if (hammerOn || !arcadeOn) return;
+      reactTo(e.clientX, e.clientY);
+      kick();
+    });
+
+    document.addEventListener('visibilitychange', kick);
+    ready = true;
+    // Only when the layer is actually on — otherwise a visitor who switched
+    // the characters off still gets the bottom crew back on every reload.
+    if (arcadeOn) { refreshPlatforms(); ensureGroundCrew(); }
+    kick();
+  }
+
+  // Anchors move when the tab changes; nothing to recompute, but stale peekers
+  // would hang off the old layout, so clear them.
+  function onRouteChange() {
+    if (!ready) return;
+    for (let i = cast.length - 1; i >= 0; i--) {
+      if (cast[i].state === 'peek') cast.splice(i, 1);
+    }
+    kick();
+  }
+
+  return {
+    init, onRouteChange, reduced,
+    // exposed for tests
+    _state: () => ({
+      cast: cast.length, particles: particles.length,
+      smashed: smashed.size, arcadeOn, hammerOn, running: rafId != null,
+    }),
+    _boxes: () => cast.map((s) => ({ name: s.name, x: s.x, y: s.y, w: s.w, h: s.h })),
+    _names: () => Object.keys(SPRITES),
+    _build: buildSprite,
+    _frames: (n) => framesOf(SPRITES[n]).length,
+    _frameFor: frameFor,
+    _platforms: () => platforms.map((p) => ({ top: Math.round(p.top), left: Math.round(p.left), right: Math.round(p.right) })),
+    _cat: () => cast.find((s) => s.name === 'cat'),
+    _spawnNamed: (name) => {
+      const s = buildSprite(name);
+      cast.push({
+        name, w: s.w, h: s.h, face: 1, bob: 0, life: 0, vx: 0, vy: 0, hop: 0,
+        state: 'stroll', resting: true, pause: 99, hold: 0, dead: false,
+        x: innerWidth / 2, y: innerHeight / 2,
+      });
+      kick();
+      return cast[cast.length - 1];
+    },
+  };
+})();

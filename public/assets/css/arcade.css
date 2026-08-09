@@ -1,0 +1,138 @@
+/* ==================== ARCADE ====================
+ * Canvas layers, the control cluster, the hammer cursor, and .smashed.
+ * The cast and the debris are drawn by arcade.js; this file only positions
+ * the surfaces they draw on.
+ * ================================================ */
+
+/* The cast sits at z-index -1: above the background orbs, but BELOW all page
+ * text and any positioned element (cards, header, nav). That ordering is what
+ * makes characters appear to hide behind things — no masking required.
+ * Painting order note: a positioned element at z-index 0 would paint ABOVE
+ * in-flow text, which is why this has to be negative. */
+.arcade-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Debris flies above everything so a smash is never hidden behind a card. */
+.arcade-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+}
+
+/* ---------- control cluster ---------- */
+
+.arcade-ctl {
+  position: fixed;
+  inset-inline-start: clamp(12px, 3vw, 22px);
+  inset-block-end: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 14px);
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 861px) {
+  .arcade-ctl {
+    inset-block-end: clamp(16px, 3vw, 28px);
+    flex-direction: row;
+  }
+}
+
+.arcade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 15px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: var(--shadow-sm);
+  transition:
+    color var(--dur-fast),
+    border-color var(--dur-fast),
+    background var(--dur-fast),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.arcade-btn svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.arcade-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.arcade-btn:active { transform: scale(0.95); }
+
+.arcade-btn[aria-pressed="true"] {
+  color: var(--on-accent);
+  background: var(--gradient-warm);
+  border-color: transparent;
+  box-shadow: var(--shadow-glow);
+}
+
+/* Dim the label when the cast is switched off, so the state reads at a glance. */
+#arcade-toggle[aria-pressed="false"] { opacity: 0.72; }
+
+/* ---------- hammer ---------- */
+
+/* Hammer cursor: shaded steel head, wooden handle with a grain line and a
+ * darker grip, angled so the striking face leads. The hotspot (7 9) sits on
+ * that face, so the hammer lands where the pixels break.
+ * Data URIs are already permitted by the CSP (img-src 'self' data:). */
+body.hammer-on,
+body.hammer-on * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='42' viewBox='0 0 42 42'%3E%3Cg transform='rotate(-40 21 21)'%3E%3Crect x='18.6' y='15' width='5' height='23' rx='2' fill='%238a5a2b'/%3E%3Crect x='18.6' y='15' width='2' height='23' fill='%23ab7742'/%3E%3Crect x='18' y='31' width='6.2' height='7' rx='2.4' fill='%235d3a1b'/%3E%3Crect x='8' y='6' width='26' height='11' rx='2.5' fill='%236c7280'/%3E%3Crect x='8' y='6' width='26' height='4' rx='2' fill='%23aeb6c2'/%3E%3Crect x='8' y='14' width='26' height='3' rx='1.5' fill='%23474c57'/%3E%3Crect x='28.5' y='6' width='5.5' height='11' rx='2' fill='%23848c99'/%3E%3Crect x='10' y='7.5' width='4' height='2' rx='1' fill='%23d6dce5'/%3E%3C/g%3E%3C/svg%3E") 7 9, crosshair !important;
+}
+
+/* The controls stay normal so you can always put the hammer away. */
+body.hammer-on .arcade-ctl,
+body.hammer-on .arcade-ctl * {
+  cursor: pointer !important;
+}
+
+/* A smashed word keeps its box and stays in the accessibility tree — only its
+ * ink disappears. `visibility: hidden` or `display: none` would collapse the
+ * layout and hide the text from screen readers; this does neither, so the
+ * page never shifts and restoring is exact.
+ * background-image is cleared for .gradient-text, whose ink comes from a
+ * background clipped to the text rather than from `color`. */
+.smashed {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  background-image: none !important;
+  text-shadow: none !important;
+}
+
+/* ---------- reduced motion ----------
+ * arcade.js returns before building anything, so these never exist. Kept as a
+ * belt-and-braces guard in case the layer is ever initialised another way. */
+@media (prefers-reduced-motion: reduce) {
+  .arcade-bg,
+  .arcade-fx,
+  .arcade-ctl { display: none !important; }
+
+  body.hammer-on,
+  body.hammer-on * { cursor: auto !important; }
+
+  .smashed {
+    color: inherit !important;
+    -webkit-text-fill-color: currentColor !important;
+  }
+}
