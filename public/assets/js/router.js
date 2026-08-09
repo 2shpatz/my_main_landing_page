@@ -181,10 +181,15 @@
     Render.all();
     Motion.init();
     Contact.init();
+    Arcade.init();
     initClicks();
     initKeyboard();
 
-    addEventListener('hashchange', () => navigate());
+    addEventListener('hashchange', () => {
+      navigate();
+      // Peeking characters are anchored to elements in the outgoing view.
+      Arcade.onRouteChange();
+    });
     // Indicator geometry depends on layout; recompute when it changes.
     addEventListener('resize', () => {
       const { route } = parseHash();

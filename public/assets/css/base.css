@@ -2,7 +2,46 @@
  * Reset, fonts, RTL foundations, motion policy.
  * ============================================== */
 
-/* Heebo ships as a variable font: one file covers weights 100-900. */
+/* Tel Aviv Eclectic — the site's face, split across two files.
+ *
+ * THE `unicode-range` LINES BELOW ARE LOAD-BEARING. Each file claims the other
+ * script's codepoints in its cmap and maps them to BLANK glyphs, so a browser
+ * believes it has coverage and never falls back. Measured:
+ *   - the Latin file draws 'אוהד שפינדל' with 0 ink but 105px of advance
+ *   - the Hebrew file draws 'Ohad ABC'   with 0 ink
+ * Drop either range and half the site's text silently turns invisible while
+ * still taking up space — it reads as a broken layout, not a missing font.
+ * The two ranges are kept disjoint so there is no ambiguity about which file
+ * serves a given character. Re-test both scripts after touching this.
+ *
+ * Both are declared `font-weight: 400` — a single static weight each, with no
+ * variable axis. Declaring `100 900` would tell the browser every weight
+ * already exists and it would stop synthesising bold, flattening every
+ * heading (measured: 0% extra ink at 800, vs +23% when declared honestly). */
+
+/* Hebrew — all body copy, headings and navigation. */
+@font-face {
+  font-family: 'Tel Aviv Eclectic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/telaviv-eclectichebrewno.2.woff2') format('woff2');
+  unicode-range: U+0590-05FF, U+20AA, U+FB1D-FB4F;
+}
+
+/* Latin, digits and punctuation — emails, URLs, numbers. */
+@font-face {
+  font-family: 'Tel Aviv Eclectic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/telaviv-eclecticlatinno.2.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+2215;
+}
+
+/* Heebo is now only a last-resort fallback for anything neither file covers.
+   Not preloaded; browsers fetch a fallback face solely if a glyph needs it. */
 @font-face {
   font-family: 'Heebo';
   font-style: normal;
@@ -32,9 +71,10 @@ html {
 }
 
 body {
-  font-family: 'Heebo', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Tel Aviv Eclectic', 'Heebo', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: var(--fs-body);
-  line-height: 1.75;
+  line-height: 1.85;
+  letter-spacing: 0.012em;
   color: var(--text-primary);
   background: var(--bg-primary);
   direction: rtl;
@@ -50,10 +90,13 @@ body {
   body { padding-block-end: 0; }
 }
 
+/* Tracking is opened up slightly rather than tightened. Tel Aviv Eclectic is a
+   geometric face with tight default sidebearings; the negative letter-spacing a
+   normal sans wants would close the Hebrew counters up. */
 h1, h2, h3, h4 {
-  line-height: 1.25;
+  line-height: 1.3;
   font-weight: 800;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.005em;
   text-wrap: balance;
 }
 
@@ -80,7 +123,7 @@ ul, ol { list-style: none; }
 
 ::selection {
   background: var(--accent-secondary);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 :focus-visible {
@@ -112,7 +155,7 @@ ul, ol { list-style: none; }
   padding: 12px 20px;
   border-radius: var(--radius-sm);
   background: var(--accent-primary);
-  color: #1a1020;
+  color: var(--on-accent);
   font-weight: 700;
   transition: inset-block-start var(--dur-fast);
 }
@@ -132,10 +175,12 @@ ul, ol { list-style: none; }
  * on something this large repaints on every frame; a gradient is free.
  * ========================================================== */
 
+/* -2 so the arcade cast (.arcade-bg, z-index -1) paints above the orbs while
+   both stay behind every piece of page text. */
 .bg-field {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   overflow: hidden;
   pointer-events: none;
 }
@@ -158,7 +203,8 @@ ul, ol { list-style: none; }
 .orb-2 {
   width: 54vmax; height: 54vmax;
   inset-block-end: -20vmax; inset-inline-start: -16vmax;
-  background: radial-gradient(circle closest-side, rgba(168, 107, 255, 0.32), transparent 72%);
+  /* Metal, not purple — this orb carries the palette's slate tone. */
+  background: radial-gradient(circle closest-side, rgba(110, 102, 137, 0.5), transparent 72%);
   animation: drift-b 27s var(--ease-in-out) infinite alternate;
 }
 .orb-3 {
@@ -178,7 +224,7 @@ ul, ol { list-style: none; }
   position: absolute;
   inset: 0;
   opacity: 0.4;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(var(--sheen) 1px, transparent 1px);
   background-size: 3px 3px;
   mix-blend-mode: overlay;
 }

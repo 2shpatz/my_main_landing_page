@@ -182,11 +182,62 @@ const Motion = (() => {
     }, 2600);
   }
 
+  /* ---------- tap the portrait for a random animation ---------- */
+
+  const PORTRAIT_FX = [
+    'fx-spin', 'fx-flip', 'fx-jelly', 'fx-bounce',
+    'fx-shake', 'fx-tada', 'fx-pop', 'fx-roll', 'fx-swing',
+  ];
+
+  function playRandomFx(host) {
+    // Ignore taps while one is already running, or they cut each other off.
+    if (host.dataset.fxPlaying) return;
+
+    // Never repeat the previous one — back-to-back duplicates read as a bug.
+    let fx;
+    do {
+      fx = PORTRAIT_FX[Math.floor(Math.random() * PORTRAIT_FX.length)];
+    } while (PORTRAIT_FX.length > 1 && fx === host.dataset.fxLast);
+
+    host.dataset.fxLast = fx;
+    host.dataset.fxPlaying = '1';
+    host.classList.add(fx);
+
+    const done = (e) => {
+      // The blob animation on a child bubbles here too; only ours counts.
+      if (e.target !== host) return;
+      host.removeEventListener('animationend', done);
+      host.classList.remove(fx);
+      delete host.dataset.fxPlaying;
+    };
+    host.addEventListener('animationend', done);
+  }
+
+  function initPortraitFx() {
+    if (reduced) return; // the whole point is motion; skip it entirely
+
+    const trigger = (e) => {
+      const frame = e.target.closest?.('.portrait-frame');
+      if (!frame) return;
+      const host = frame.closest('.hero-portrait');
+      if (host) playRandomFx(host);
+    };
+
+    document.addEventListener('click', trigger);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (!e.target.closest?.('.portrait-frame')) return;
+      e.preventDefault(); // Space would scroll the page
+      trigger(e);
+    });
+  }
+
   function init() {
     initReveal();
     initScroll();
     initPointer();
     initRotator();
+    initPortraitFx();
   }
 
   return { init, observeAll, revealNow, reduced };

@@ -29,7 +29,16 @@ const SITE_CONTENT = {
     rotatingWords: ['מפתח', 'פותר בעיות', 'בונה אוטומציות', 'סקרן בלתי נלאה'],
     // Your photo: drop a file in public/assets/img/ and put the path here.
     // Leave as null to show your initials in a gradient circle instead.
-    photo: null, // e.g. 'assets/img/ohad.jpg'
+    photo: 'assets/img/ohad_logo.webp',
+
+    // How the photo sits inside the blob shape:
+    //   'cover'   — fills the whole shape, crops the edges. Best for a square
+    //               photo, or any photo where the face is centered with room around it.
+    //   'contain' — shows the entire image, no cropping. Best for a cut-out or
+    //               logo on a flat background (the shape fills with `photoBg`).
+    photoFit: 'contain',
+    photoBg: '#000',
+
     initials: 'א״ש',
 
     // WhatsApp number in international format, digits only, no + and no dashes.
@@ -159,7 +168,8 @@ const SITE_CONTENT = {
         note: 'פתחו את PayBox והעבירו למספר הזה.',
         handle: 'TODO_PAYBOX_PHONE', // e.g. '050-123-4567'
         icon: 'paybox',
-        accent: '#7c3aed',
+        // Metal rather than PayBox's brand purple, to keep the palette clean.
+        accent: '#6e6689',
       },
     ],
   },
@@ -199,7 +209,7 @@ const SITE_CONTENT = {
 
   /* ---------- Navigation labels ---------- */
   nav: [
-    { id: 'about', label: 'עליי', icon: 'user' },
+    { id: 'about', label: 'קצת עלי', icon: 'user' },
     { id: 'projects', label: 'הפרויקטים שלי', icon: 'grid' },
     { id: 'support', label: 'תמיכה', icon: 'heart' },
     { id: 'contact', label: 'צור קשר', icon: 'mail' },
@@ -207,5 +217,28 @@ const SITE_CONTENT = {
 
   footer: {
     text: 'נבנה באהבה, בלי תבניות מוכנות.',
+  },
+
+  /* ---------- The retro arcade layer ----------
+   * דמויות פיקסל שמסתובבות בעמוד, מציצות מאחורי לשוניות וכרטיסים,
+   * ונופלות לאט מלמעלה. בנוסף יש פטיש ששובר מילים לפיקסלים.
+   *
+   * enabled — false מכבה את כל השכבה לגמרי.
+   * density — כמה דמויות יכולות להופיע בו-זמנית:
+   *           'calm' = 2, 'normal' = 4, 'busy' = 6  (במובייל תמיד פחות)
+   *
+   * הערה: מי שהגדיר במערכת ההפעלה "הפחתת תנועה" לא יראה את השכבה בכלל,
+   * וגם לא את הכפתורים — כל הרעיון כאן הוא תנועה.
+   * -------------------------------------------- */
+  arcade: {
+    enabled: true,
+    density: 'normal',
+    labels: {
+      cast: 'דמויות',
+      castOn: 'הדמויות פעילות — לחצו לכיבוי',
+      castOff: 'הדמויות כבויות — לחצו להפעלה',
+      hammer: 'פטיש',
+      hammerOn: 'הפטיש פעיל — לחצו כדי להחזיר הכול',
+    },
   },
 };

@@ -61,6 +61,7 @@
   }
 }
 
+
 .hero-greeting {
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -75,14 +76,14 @@
 }
 
 .hero-tagline {
-  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  font-size: clamp(1.28rem, 2.5vw, 1.58rem);
   color: var(--text-secondary);
   max-width: 46ch;
   margin-block-end: 10px;
 }
 
 .hero-role {
-  font-size: clamp(1.15rem, 2.6vw, 1.55rem);
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
   font-weight: 600;
   color: var(--text-secondary);
   margin-block-end: 12px;
@@ -154,12 +155,28 @@
   100% { border-radius: 46% 54% 60% 40% / 56% 48% 52% 44%; }
 }
 
+.portrait-frame {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .portrait-frame > * {
   width: 100%;
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
   background: var(--bg-elevated);
+}
+
+/* A tall cut-out would lose its head and chin to a square `cover` crop, so
+   fit the whole image and let the frame background carry the shape. */
+.portrait-photo.fit-contain {
+  object-fit: contain;
+  /* The blob curves inward top and bottom, so inset the image slightly or a
+     full-height subject gets clipped by the border-radius. */
+  padding: 3%;
 }
 
 .portrait-initials {
@@ -169,6 +186,109 @@
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+}
+
+/* ---- Tap-the-face easter egg ----
+ * motion.js adds one of these at random on click/tap and removes it on
+ * animationend. Every keyframe starts AND ends at the identity transform, so
+ * removing the class never produces a visible snap back.
+ * The blob animation lives on .portrait-frame and only touches border-radius,
+ * so these transforms on the parent never fight it. */
+
+.hero-portrait[class*="fx-"] { will-change: transform; }
+
+.hero-portrait.fx-spin   { animation: fx-spin   900ms var(--ease-out-expo); }
+.hero-portrait.fx-flip   { animation: fx-flip   900ms var(--ease-in-out); }
+.hero-portrait.fx-jelly  { animation: fx-jelly  900ms var(--ease-out-expo); }
+.hero-portrait.fx-bounce { animation: fx-bounce 900ms var(--ease-out-expo); }
+.hero-portrait.fx-shake  { animation: fx-shake  700ms var(--ease-in-out); }
+.hero-portrait.fx-tada   { animation: fx-tada   900ms var(--ease-in-out); }
+.hero-portrait.fx-pop    { animation: fx-pop    620ms var(--ease-spring); }
+.hero-portrait.fx-roll   { animation: fx-roll  1000ms var(--ease-in-out); }
+.hero-portrait.fx-swing  {
+  animation: fx-swing 900ms var(--ease-out-expo);
+  transform-origin: top center;
+}
+
+@keyframes fx-spin {
+  from { transform: rotate(0); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes fx-flip {
+  from { transform: perspective(900px) rotateY(0); }
+  to   { transform: perspective(900px) rotateY(360deg); }
+}
+
+@keyframes fx-jelly {
+  0%, 100% { transform: scale(1, 1); }
+  30% { transform: scale(1.26, 0.76); }
+  40% { transform: scale(0.78, 1.22); }
+  50% { transform: scale(1.14, 0.86); }
+  65% { transform: scale(0.95, 1.05); }
+  80% { transform: scale(1.04, 0.96); }
+}
+
+@keyframes fx-bounce {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  20% { transform: translateY(-30px) scaleY(1.06); }
+  42% { transform: translateY(0) scaleY(0.9); }
+  62% { transform: translateY(-15px) scaleY(1.03); }
+  82% { transform: translateY(0) scaleY(0.96); }
+}
+
+@keyframes fx-shake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  15% { transform: translateX(-13px) rotate(-5deg); }
+  30% { transform: translateX(12px) rotate(4deg); }
+  45% { transform: translateX(-9px) rotate(-3deg); }
+  60% { transform: translateX(7px) rotate(2deg); }
+  80% { transform: translateX(-4px) rotate(-1deg); }
+}
+
+@keyframes fx-tada {
+  0%, 100% { transform: scale(1) rotate(0); }
+  10%, 20% { transform: scale(0.9) rotate(-4deg); }
+  30%, 50%, 70%, 90% { transform: scale(1.14) rotate(4deg); }
+  40%, 60%, 80% { transform: scale(1.14) rotate(-4deg); }
+}
+
+@keyframes fx-pop {
+  0%, 100% { transform: scale(1) rotate(0); }
+  35% { transform: scale(1.24) rotate(-7deg); }
+  62% { transform: scale(0.93) rotate(4deg); }
+}
+
+@keyframes fx-roll {
+  0%   { transform: translateX(0) rotate(0); }
+  50%  { transform: translateX(-18%) rotate(-180deg); }
+  100% { transform: translateX(0) rotate(-360deg); }
+}
+
+@keyframes fx-swing {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-11deg); }
+  60% { transform: rotate(7deg); }
+  80% { transform: rotate(-4deg); }
+}
+
+/* On phones the portrait leads — it's what makes the page feel like a person.
+   Everything else tightens so the CTA still clears the bottom nav.
+   Must stay after the rules above: media queries add no specificity, so a
+   later equal-specificity rule would otherwise win. */
+@media (max-width: 860px) {
+  .hero {
+    padding-block: 4px 0;
+    gap: 18px;
+  }
+  .hero-portrait {
+    order: -1;
+    width: min(215px, 50vw);
+  }
+  .hero h1 { margin-block-end: 8px; }
+  .hero-role { margin-block-end: 6px; }
+  .hero-actions { margin-block-start: 18px; }
 }
 
 /* ==================== ABOUT ==================== */
@@ -181,7 +301,7 @@
 
 .about-body p {
   color: var(--text-secondary);
-  font-size: clamp(1.02rem, 1.7vw, 1.12rem);
+  font-size: clamp(1.25rem, 2vw, 1.38rem);
 }
 
 .highlight-grid {
@@ -323,7 +443,7 @@
 .tag {
   padding: 4px 11px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sheen-mid);
   border: 1px solid var(--border-subtle);
   font-size: var(--fs-xs);
   color: var(--text-secondary);
@@ -453,7 +573,7 @@
 
 .support-icon svg { width: 27px; height: 27px; }
 
-.support-card h3 { font-size: 1.08rem; }
+.support-card h3 { font-size: 1.3rem; }
 
 .support-card .s-note {
   color: var(--text-secondary);
@@ -475,7 +595,7 @@
   padding: 12px 16px;
   min-height: 46px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--sheen);
   border: 1px dashed var(--border-strong);
   font-weight: 700;
   cursor: pointer;
@@ -483,7 +603,7 @@
 }
 
 .handle-box:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--sheen-strong);
   border-color: var(--accent, var(--accent-primary));
 }
 
@@ -531,7 +651,7 @@
 
 .wa-card h3 {
   margin-block-end: 8px;
-  font-size: 1.08rem;
+  font-size: 1.3rem;
 }
 
 .wa-card p {
@@ -578,7 +698,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #25d366;
+  background: var(--brand-whatsapp);
   box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.6);
   animation: pulse 2.4s infinite;
 }
@@ -592,9 +712,9 @@
 .setup-notice {
   padding: 15px 18px;
   border-radius: var(--radius-md);
-  background: rgba(255, 176, 102, 0.1);
-  border: 1px solid rgba(255, 176, 102, 0.3);
-  color: #ffce9e;
+  background: var(--notice-soft);
+  border: 1px solid var(--notice-border);
+  color: var(--notice-text);
   font-size: var(--fs-sm);
   line-height: 1.65;
   margin-block-end: 20px;

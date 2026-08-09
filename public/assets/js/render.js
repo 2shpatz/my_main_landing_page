@@ -89,8 +89,15 @@ const Render = (() => {
     const m = C.meta;
     const a = C.about;
 
+    // 'contain' shows a cut-out image whole; the frame fills with photoBg so the
+    // image's own background and the shape read as one piece.
+    const fitClass = m.photoFit === 'contain' ? ' fit-contain' : '';
+    const fitBg = m.photoFit === 'contain' && m.photoBg
+      ? ` style="background:${esc(m.photoBg)}"` : '';
+
     const portrait = has(m.photo)
-      ? `<img src="${esc(m.photo)}" alt="${esc(m.name)}" width="300" height="300"
+      ? `<img class="portrait-photo${fitClass}"${fitBg} src="${esc(m.photo)}"
+           alt="${esc(m.name)}" width="300" height="300"
            fetchpriority="high" decoding="async">`
       : `<div class="portrait-initials">${esc(m.initials || '')}</div>`;
 
@@ -111,7 +118,7 @@ const Render = (() => {
             <p class="hero-tagline">${esc(m.tagline)}</p>
             <div class="hero-actions">
               <a class="btn btn-primary magnetic" href="#contact">
-                ${icon('mail')}<span>בוא נדבר</span>
+                ${icon('mail')}<span>דברו איתי!</span>
               </a>
               <a class="btn btn-ghost magnetic" href="#projects">
                 ${icon('grid')}<span>מה בניתי</span>
@@ -119,7 +126,8 @@ const Render = (() => {
             </div>
           </div>
           <div class="hero-portrait reveal" style="--i:1">
-            <div class="portrait-frame">${portrait}</div>
+            <div class="portrait-frame" role="button" tabindex="0"
+                 aria-label="לחצו על התמונה להפתעה">${portrait}</div>
           </div>
         </div>
 

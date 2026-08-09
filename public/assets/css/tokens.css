@@ -2,31 +2,77 @@
  * Change a value here and it propagates everywhere.
  * ======================================================= */
 
+/* Base palette — dark metal.
+ *   #2D283E  plum-black    background
+ *   #4C495D  dark slate    raised surfaces
+ *   #564F6F  metal         borders, structure, the third accent slot
+ *   #D1D7E0  cool silver   text
+ * The source palette's vivid purple (#802BB1) is deliberately unused; the
+ * metal shades take its place, and warm coral is the only saturated colour. */
+
 :root {
+  /* ---- Metal ramp ---- */
+  --metal: #564f6f;
+  --metal-dim: #4c495d;
+  --metal-bright: #6e6689;
+
   /* ---- Surfaces ---- */
-  --bg-primary: #12101a;
-  --bg-elevated: #1a1725;
-  --bg-card: rgba(255, 255, 255, 0.045);
-  --bg-card-hover: rgba(255, 255, 255, 0.075);
-  --bg-glass: rgba(18, 16, 26, 0.72);
+  --bg-primary: #2d283e;
+  --bg-elevated: #3a3550;
+  --bg-card: rgba(209, 215, 224, 0.055);
+  --bg-card-hover: rgba(209, 215, 224, 0.095);
+  --bg-glass: rgba(45, 40, 62, 0.74);
 
-  /* ---- Text ---- */
-  --text-primary: #f4f1f7;
-  --text-secondary: #c3bdd1;
-  --text-muted: #8a839c;
+  /* ---- Text (all ≥4.5:1 on --bg-primary) ---- */
+  --text-primary: #d1d7e0;
+  --text-secondary: #aeb4c4;
+  --text-muted: #9297aa;
 
-  /* ---- Accents: warm, personal, not corporate-blue ---- */
+  /* ---- Accents: warm coral is the only saturated colour on the page ---- */
   --accent-primary: #ff8a5b;
   --accent-secondary: #ff5f96;
-  --accent-tertiary: #a86bff;
+  --accent-tertiary: var(--metal);
 
-  --gradient-primary: linear-gradient(135deg, #ff9a56 0%, #ff5f96 50%, #a86bff 100%);
+  --gradient-primary: linear-gradient(135deg, #ffab6b 0%, #ff8a5b 45%, #ff5f96 100%);
   --gradient-warm: linear-gradient(120deg, #ffb066 0%, #ff6b9d 100%);
-  --gradient-text: linear-gradient(100deg, #ffb066 0%, #ff6b9d 45%, #b98bff 100%);
+  --gradient-text: linear-gradient(100deg, #ffc182 0%, #ff8a5b 40%, #ff5f96 100%);
+  --gradient-metal: linear-gradient(135deg, #6e6689 0%, #564f6f 50%, #4c495d 100%);
 
-  /* ---- Borders ---- */
-  --border-subtle: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Text sitting on top of a coral accent fill. */
+  --on-accent: #2d283e;
+
+  /* ---- Light overlays ----
+   * Tinted with the palette's silver rather than pure white, so raised
+   * surfaces read as metal instead of grey haze. */
+  --sheen: rgba(209, 215, 224, 0.05);
+  --sheen-mid: rgba(209, 215, 224, 0.07);
+  --sheen-strong: rgba(209, 215, 224, 0.1);
+
+  /* ---- State colours ----
+   * Pulled toward the palette: the error red leans to the accent pink, the
+   * success green is desaturated to sit on plum, the notice is the warm amber
+   * already used at the top of --gradient-text. */
+  --danger: #ff7a8a;
+  --danger-text: #ffb3bd;
+  --danger-soft: rgba(255, 122, 138, 0.12);
+  --danger-border: rgba(255, 122, 138, 0.32);
+
+  --success: #6fdca4;
+  --success-text: #9ee9c4;
+  --success-soft: rgba(111, 220, 164, 0.12);
+  --success-border: rgba(111, 220, 164, 0.34);
+
+  --notice-text: #ffd2a3;
+  --notice-soft: rgba(255, 193, 130, 0.1);
+  --notice-border: rgba(255, 193, 130, 0.3);
+
+  /* Brand colours owned by other companies — deliberately not palette-shifted. */
+  --brand-whatsapp: #25d366;
+  --brand-whatsapp-ink: #08331a;
+
+  /* ---- Borders: metal-tinted rather than plain white ---- */
+  --border-subtle: rgba(209, 215, 224, 0.11);
+  --border-strong: rgba(209, 215, 224, 0.2);
 
   /* ---- Radii ---- */
   --radius-sm: 10px;
@@ -56,14 +102,19 @@
   --header-height: 68px;
   --mobile-nav-height: 64px;
 
-  /* ---- Type scale (fluid) ---- */
-  --fs-display: clamp(2.4rem, 7vw, 4.4rem);
-  --fs-h1: clamp(1.9rem, 4.6vw, 2.9rem);
-  --fs-h2: clamp(1.45rem, 3vw, 1.95rem);
-  --fs-h3: clamp(1.1rem, 2vw, 1.28rem);
-  --fs-body: clamp(1rem, 1.5vw, 1.075rem);
-  --fs-sm: 0.92rem;
-  --fs-xs: 0.8rem;
+  /* ---- Type scale (fluid) ----
+   * Deliberately large: body sits at ~1.25rem (20-22px) rather than the usual
+   * 16-17px, per an explicit request to make the text much bigger. The scale
+   * was raised while a condensed face was in use; Hebrew is now set in Heebo,
+   * which has a larger apparent size, so this reads bigger still. Dial the
+   * whole site down by editing this block alone. */
+  --fs-display: clamp(3.1rem, 8.6vw, 5.4rem);
+  --fs-h1: clamp(2.45rem, 5.6vw, 3.6rem);
+  --fs-h2: clamp(1.9rem, 3.9vw, 2.5rem);
+  --fs-h3: clamp(1.4rem, 2.5vw, 1.65rem);
+  --fs-body: clamp(1.25rem, 1.9vw, 1.35rem);
+  --fs-sm: 1.1rem;
+  --fs-xs: 0.98rem;
 }
 
 /* Respect an explicit OS light-mode preference without a full second theme:
