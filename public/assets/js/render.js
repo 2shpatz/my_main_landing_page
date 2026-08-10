@@ -17,7 +17,35 @@ const Render = (() => {
   const isTodo = (v) => typeof v === 'string' && v.startsWith('TODO_');
   const has = (v) => v && !isTodo(v);
 
-  const paras = (arr) => (arr || []).map((p) => `<p>${esc(p)}</p>`).join('');
+  /* The WhatsApp number is stored base64-of-reversed in content.js, never in the
+   * clear, and is decoded here on demand. Callers use it to build a wa.me URL at
+   * click time — it is deliberately never written into the markup or shown as
+   * text, so neither the served files nor the rendered DOM carry the digits.
+   * Obfuscation, not security: whatever the page can decode, so can a person. */
+  const whatsapp = () => {
+    const enc = C.meta.whatsappEnc;
+    if (!has(enc)) return '';
+    try {
+      return atob(enc).split('').reverse().join('');
+    } catch {
+      return ''; // malformed base64 — treat it as "no number" rather than throw
+    }
+  };
+
+  // A newline inside a paragraph string is an intentional line break, not a
+  // new paragraph. Escaping happens first, so the <br> we add is the only tag.
+  const nl2br = (s) => s.replace(/\r\n|[\r\n]/g, '<br>');
+
+  // Markdown-style [text](url) inside paragraph copy. Runs on already-escaped
+  // text and only accepts http(s) URLs, so no markup can come in from content.
+  const links = (s) => s.replace(
+    /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    (_, text, url) => `<a class="text-link" href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`,
+  );
+
+  const rich = (s) => nl2br(links(esc(s)));
+
+  const paras = (arr) => (arr || []).map((p) => `<p>${rich(p)}</p>`).join('');
 
   const ICONS = {
     user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
@@ -50,9 +78,24 @@ const Render = (() => {
   /* ---------- shell: brand, nav, footer ---------- */
 
   function shell() {
-    document.getElementById('brand-mark').textContent = C.meta.initials || '';
+    // The mark shows the logo when there is one and falls back to the initials.
+    // Same treatment as the hero portrait: a cut-out sits whole inside the tile,
+    // on its own background, so the artwork and the frame read as one piece.
+    const mark = document.getElementById('brand-mark');
+    const m = C.meta;
+    if (has(m.photo)) {
+      mark.classList.add('has-logo');
+      mark.innerHTML = `<img class="brand-logo" src="${esc(m.photo)}"
+          alt="${esc(m.name)}" width="34" height="34" decoding="async"
+          ${m.photoBg ? `style="background:${esc(m.photoBg)}"` : ''}>`;
+    } else {
+      mark.classList.remove('has-logo');
+      mark.textContent = m.initials || '';
+    }
     document.getElementById('brand-name').textContent = C.meta.name || '';
-    document.getElementById('footer-text').textContent = C.footer?.text || '';
+    // Same treatment as paragraph copy, so a \n in the footer line is a line
+    // break and [text](url) is a link. Escaped first, so nothing else gets in.
+    document.getElementById('footer-text').innerHTML = rich(C.footer?.text || '');
     document.getElementById('footer-name').textContent = C.meta.name || '';
     document.getElementById('footer-year').textContent = new Date().getFullYear();
 
@@ -265,7 +308,7 @@ const Render = (() => {
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">תמיכה</span>
-          <h2>רוצה לומר תודה?</h2>
+          <h2>תמיכה בי! מה חשבתם? יש לי פיות להאכיל...</h2>
           <p>${esc(s.intro)}</p>
         </div>
         ${cards}
@@ -290,10 +333,11 @@ const Render = (() => {
       direct.push(`<div class="direct-row">${icon('mail')}
         <a href="mailto:${esc(m.email)}" class="ltr">${esc(m.email)}</a></div>`);
     }
-    if (has(m.whatsapp)) {
+    // A button, not a link: an href would put the number straight back into the
+    // DOM. The delegated handler in contact.js builds the URL when it's clicked.
+    if (whatsapp()) {
       direct.push(`<div class="direct-row">${icon('phone')}
-        <a href="https://wa.me/${esc(m.whatsapp)}" target="_blank" rel="noopener noreferrer"
-           class="ltr">+${esc(m.whatsapp)}</a></div>`);
+        <button type="button" class="link-btn" data-wa="plain">וואטסאפ</button></div>`);
     }
     (m.socials || []).forEach((s) => {
       if (!has(s.url)) return;
@@ -303,7 +347,7 @@ const Render = (() => {
 
     // With no WhatsApp number and no direct details, the aside would be an
     // empty column — collapse to one column instead of leaving dead space.
-    const hasAside = has(m.whatsapp) || direct.length > 0;
+    const hasAside = !!whatsapp() || direct.length > 0;
 
     document.getElementById('view-contact').innerHTML = `
       <div class="container">
@@ -371,11 +415,11 @@ const Render = (() => {
 
           ${!hasAside ? '' : `
           <aside class="contact-aside">
-            ${has(m.whatsapp) ? `
+            ${whatsapp() ? `
               <div class="card wa-card reveal">
                 <h3>${esc(c.whatsapp.title)}</h3>
                 <p>${esc(c.whatsapp.text)}</p>
-                <button class="btn btn-whatsapp magnetic" type="button" id="wa-btn">
+                <button class="btn btn-whatsapp magnetic" type="button" id="wa-btn" data-wa="form">
                   ${icon('whatsapp')}<span>${esc(c.whatsapp.cta)}</span>
                 </button>
               </div>` : ''}
@@ -403,5 +447,5 @@ const Render = (() => {
     contact();
   }
 
-  return { all, projectDetail, showProjectIndex, icon, esc, has };
+  return { all, projectDetail, showProjectIndex, icon, esc, has, whatsapp };
 })();

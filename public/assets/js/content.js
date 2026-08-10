@@ -22,11 +22,11 @@ const SITE_CONTENT = {
   meta: {
     name: 'אוהד שפינדל',
     // Short line under your name in the hero. Keep it punchy.
-    tagline: 'בונה דברים שעובדים, ומסביר אותם בשפה של בני אדם',
+    tagline: 'בונה דברים שעובדים, ומסביר אותם בשפה פשוטה',
     // Rotating words in the hero, shown as: "<prefix> <word>".
     // Keep the words grammatically interchangeable so every combination reads well.
     rotatingPrefix: 'אני',
-    rotatingWords: ['מפתח', 'פותר בעיות', 'בונה אוטומציות', 'סקרן בלתי נלאה'],
+    rotatingWords: ['מפתח', 'פותר בעיות', 'בונה אוטומציות', 'נדלק משטויות', 'אשכולית אדומה'],
     // Your photo: drop a file in public/assets/img/ and put the path here.
     // Leave as null to show your initials in a gradient circle instead.
     photo: 'assets/img/ohad_logo.webp',
@@ -41,10 +41,19 @@ const SITE_CONTENT = {
 
     initials: 'א״ש',
 
-    // WhatsApp number in international format, digits only, no + and no dashes.
-    // Israeli 050-559-5538 becomes 972505595538
-    whatsapp: 'TODO_WHATSAPP', // e.g. '972501234567'
-    email: 'TODO_EMAIL', // e.g. 'ohad@example.com'
+    // WhatsApp number, NOT stored in the clear. This site is a static file that
+    // anyone can read, and a plain 972… string is exactly what number-harvesting
+    // bots grep for — so it's kept base64-encoded-backwards and decoded only at
+    // the moment someone clicks. It is never printed on the page and never put
+    // in the markup.
+    //
+    // This is obfuscation, not encryption: it stops casual scraping, not a person
+    // who opens devtools. Don't treat the number as private.
+    //
+    // To change it, run this in any browser console and paste the result:
+    //   btoa('972501234567'.split('').reverse().join(''))
+    whatsappEnc: 'NzQ3NDI2NDQ1Mjc5',
+    email: 'shpatz.apps@gmail.com',
 
     // Optional social links. Delete any line you don't want shown.
     socials: [
@@ -56,14 +65,16 @@ const SITE_CONTENT = {
 
   /* ---------- Tab: About me ---------- */
   about: {
-    greeting: 'נעים מאוד, אני אוהד',
+    greeting: 'נעים מאוד',
 
     // Each string here is one paragraph. Add as many as you like.
     // Write like you talk — this is the part that makes people feel they know you.
+    // Use \n inside a string for a line break without starting a new paragraph.
+    // For a link, write [the clickable text](https://the-url.com).
     paragraphs: [
-      'TODO_ABOUT_1 — כאן מספרים את הסיפור בגוף ראשון. מה אתה עושה, ולמה דווקא את זה. שתיים-שלוש שורות, בלי מילים גדולות.',
-      'TODO_ABOUT_2 — כאן אפשר להוסיף את הרקע: מאיפה הגעת, מה למדת בדרך, מה הביא אותך לאן שאתה נמצא היום.',
-      'TODO_ABOUT_3 — וכאן משהו אישי שאין לו קשר לעבודה. תחביב, משפחה, משהו שגורם לאנשים לחייך. זה מה שהופך דף אינטרנט לאדם.',
+      'איזה כיף לכם שהגעתם, אתם במקום הנכון...\nאם אתם פה סימן שכמוני, אתם מחפשים איך לעשות את החיים שלכם פשוטים יותר (וכמובן בלי לקרוע את הכיס 😉)',
+      'אז מה מוצאים פה?\nאפליקציות, אוטומציות, קישורים לחיים קלים, הפתעות, ייעוץ ואוזן קשבת.',
+      'עוד קצת...\nאני בן זוג של תדהר, מדריכת הורים ויועצת שינה (מי שמכיר מכיר... ומי שלא [ללחוץ כאן מיד](https://www.instagram.com/tidharlevy.parenting)!)\nאבא לאמרי, נטע וברוס 🧒👩🐕\nמהנדס תשתיות תוכנה, DevOps באפלייד מטריאלס (שלחו קורות חיים)',
     ],
 
     // Three or four things you want people to know immediately.
@@ -182,7 +193,7 @@ const SITE_CONTENT = {
     // Get a free key in 30 seconds at https://web3forms.com — no account needed,
     // just type your email and they send you the key. Paste it here.
     // Until you do, the form shows a friendly notice instead of failing silently.
-    web3formsKey: 'TODO_WEB3FORMS_KEY',
+    web3formsKey: '394d57e8-328e-43c4-9831-28ae84fa03e3',
 
     // Subject line of the email that lands in your inbox.
     emailSubject: 'הודעה חדשה מהאתר האישי',
@@ -199,8 +210,8 @@ const SITE_CONTENT = {
     },
 
     whatsapp: {
-      title: 'מעדיף וואטסאפ?',
-      text: 'לחיצה אחת ואנחנו בשיחה. אם מילאת את הטופס — הפרטים יעברו איתך.',
+      title: 'רוצה דרך וואטסאפ?',
+      text: 'לחיצה אחת ואנחנו בשיחה.',
       cta: 'שליחת הודעה בוואטסאפ',
       // The message pre-filled in WhatsApp when the form is empty.
       defaultMessage: 'היי אוהד, הגעתי מהאתר שלך ורציתי לשאול —',
@@ -216,7 +227,7 @@ const SITE_CONTENT = {
   ],
 
   footer: {
-    text: 'נבנה באהבה, בלי תבניות מוכנות.',
+    text: '"גדול יותר זה לא תמיד טוב יותר, אבל זה תמיד גדול יותר."\nפומבה [שם,שם]',
   },
 
   /* ---------- The retro arcade layer ----------

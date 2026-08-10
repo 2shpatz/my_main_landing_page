@@ -52,6 +52,32 @@
   transition: transform var(--dur-med) var(--ease-spring);
 }
 
+/* With a logo in it the gradient becomes a thin frame around the artwork
+   instead of a filled tile, so the mark still reads as a rounded square. */
+.brand-mark.has-logo {
+  padding: 2px;
+  font-size: 0;
+}
+
+/* The artwork is a tall cut-out, so it sits whole and centred inside the tile
+   with a small inset: flush to the edges it would clip on the rounded corners.
+   Its own background fills the inset, so tile and artwork read as one piece.
+   The square comes from aspect-ratio: as a centred grid item a percentage height
+   doesn't resolve, and `height: auto` is needed to beat the img's own height
+   attribute — without either the box ends up taller than the tile, and the logo
+   spills out over the frame. */
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  padding: 1px;
+  border-radius: 9px;
+  object-fit: contain;
+  object-position: center;
+}
+
 .brand:hover .brand-mark { transform: rotate(-8deg) scale(1.08); }
 
 /* ---------- Tabs ---------- */

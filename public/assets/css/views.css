@@ -304,6 +304,21 @@
   font-size: clamp(1.25rem, 2vw, 1.38rem);
 }
 
+/* Inline [text](url) links inside paragraph copy. base.css strips anchor
+   styling, so they need their own colour and underline to read as links. */
+.text-link {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: color var(--dur-fast) ease;
+}
+
+.text-link:hover,
+.text-link:focus-visible {
+  color: var(--accent-secondary);
+}
+
 .highlight-grid {
   display: grid;
   gap: 16px;
@@ -684,6 +699,23 @@
 
 .direct-row a { transition: color var(--dur-fast); }
 .direct-row a:hover { color: var(--accent-primary); }
+
+/* Buttons standing in for links, where putting the target in an href would leak
+   it into the markup (the WhatsApp number). They must read as links, not chrome. */
+.link-btn {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: color var(--dur-fast);
+}
+
+.link-btn:hover,
+.link-btn:focus-visible { color: var(--accent-primary); }
 
 .response-note {
   display: inline-flex;

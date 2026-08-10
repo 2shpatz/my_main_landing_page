@@ -39,7 +39,12 @@ const Arcade = (() => {
    * Taito and Nintendo. Swapping any entry here for an original design is a
    * one-object change and needs no other edits. */
 
-  const GHOST_ROWS = [
+  /* The ghosts' two frames differ only in the skirt: the fringe alternates
+   * between four tabs and three, which is what makes them look like they're
+   * flowing rather than sliding. The pupils sit on the right of each eye, so
+   * mirroring the sprite for a leftward walk also makes them look where they're
+   * going — no separate per-direction frames needed. */
+  const GHOST_BODY = [
     '00011111000',
     '00111111100',
     '01111111110',
@@ -49,42 +54,172 @@ const Arcade = (() => {
     '11111111111',
     '11111111111',
     '11111111111',
-    '11011011011',
+  ];
+
+  const GHOST_FRAMES = [
+    [...GHOST_BODY, '11011011011'],
+    [...GHOST_BODY, '01101110110'],
   ];
 
   const SPRITES = {
     // Maze-chase ghosts — same shape, two colourways.
-    ghostPink: { w: 11, h: 10, pal: ['', '#ff7ab8', '#ffffff', '#2b2b6b'], rows: GHOST_ROWS },
-    ghostCyan: { w: 11, h: 10, pal: ['', '#69e0ef', '#ffffff', '#2b2b6b'], rows: GHOST_ROWS },
+    ghostPink: { w: 11, h: 10, pal: ['', '#ff7ab8', '#ffffff', '#2b2b6b'], frames: GHOST_FRAMES },
+    ghostCyan: { w: 11, h: 10, pal: ['', '#69e0ef', '#ffffff', '#2b2b6b'], frames: GHOST_FRAMES },
 
-    // The dot-muncher, wedge open.
+    // The dot-muncher. Frames 0-2 are the chomp cycle (shut, half, wide); 3-8
+    // are the death, played once when a hammer catches it: the mouth keeps
+    // opening past the body until only a spark is left, and sparkle() finishes
+    // the job. Traced from the reference GIF that shipped with these frames.
+    // The grid is 13 wide though the body is 11, so the collapsed crescent in
+    // frame 6 can spread wider than the mouth-shut circle.
     muncher: {
-      w: 9, h: 9, pal: ['', '#ffd93d'],
-      rows: [
-        '001111100',
-        '011111110',
-        '111111000',
-        '111110000',
-        '111100000',
-        '111110000',
-        '111111000',
-        '011111110',
-        '001111100',
+      w: 13, h: 11, pal: ['', '#ffd93d'],
+      frames: [
+        [ // 0 — shut
+          '0000111110000',
+          '0001111111000',
+          '0011111111100',
+          '0111111111110',
+          '0111111111110',
+          '0111110000000',
+          '0111111111110',
+          '0111111111110',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 1 — half open
+          '0000111110000',
+          '0001111111000',
+          '0011111111100',
+          '0111111111100',
+          '0111111110000',
+          '0111110000000',
+          '0111111110000',
+          '0111111111100',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 2 — wide open
+          '0000111110000',
+          '0001111111000',
+          '0011111110000',
+          '0111111100000',
+          '0111111000000',
+          '0111110000000',
+          '0111111000000',
+          '0111111100000',
+          '0011111110000',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 3 — death: the mouth swings up and the crown splits
+          '0000000000000',
+          '0001100011000',
+          '0011110111100',
+          '0111110111110',
+          '0111110111110',
+          '0111111111110',
+          '0111111111110',
+          '0111111111110',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 4 — death: gap widening, horns shrinking
+          '0000000000000',
+          '0000000000000',
+          '0011000001100',
+          '0111100011110',
+          '0111110111110',
+          '0111111111110',
+          '0111111111110',
+          '0111111111110',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 5 — death: horns almost gone
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0111000001110',
+          '0111111111110',
+          '0111111111110',
+          '0111111111110',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 6 — death: opened past itself, a flat crescent
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0011111111100',
+          '0111111111110',
+          '0011111111100',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 7 — death: a sliver
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0001111111000',
+          '0000111110000',
+        ],
+        [ // 8 — death: the spark it goes out on
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000000000000',
+          '0000001000000',
+          '0000001000000',
+          '0000001000000',
+          '0000001000000',
+          '0000001000000',
+          '0000001000000',
+        ],
       ],
     },
 
-    // Descending crab alien.
+    // Descending crab alien. Two frames, arms down then arms up — the invaders
+    // flip on every step of the march rather than animating smoothly.
     invader: {
       w: 11, h: 8, pal: ['', '#7ee081'],
-      rows: [
-        '00100000100',
-        '00010001000',
-        '00111111100',
-        '01101110110',
-        '11111111111',
-        '10111111101',
-        '10100000101',
-        '00011011000',
+      frames: [
+        [ // arms down
+          '00100000100',
+          '00010001000',
+          '00111111100',
+          '01101110110',
+          '11111111111',
+          '10111111101',
+          '10100000101',
+          '00011011000',
+        ],
+        [ // arms up
+          '00100000100',
+          '10010001001',
+          '10111111101',
+          '11101110111',
+          '11111111111',
+          '01111111110',
+          '00100000100',
+          '01000000010',
+        ],
       ],
     },
 
@@ -106,33 +241,57 @@ const Arcade = (() => {
       ],
     },
 
-    // Top-row squid — the small, fast one.
+    // Top-row squid — the small, fast one. Its legs tuck in and splay out.
     invaderSquid: {
       w: 8, h: 8, pal: ['', '#69e0ef'],
-      rows: [
-        '00011000',
-        '00111100',
-        '01111110',
-        '11011011',
-        '11111111',
-        '00100100',
-        '01011010',
-        '10100101',
+      frames: [
+        [ // legs down
+          '00011000',
+          '00111100',
+          '01111110',
+          '11011011',
+          '11111111',
+          '00100100',
+          '01011010',
+          '10100101',
+        ],
+        [ // legs out
+          '00011000',
+          '00111100',
+          '01111110',
+          '11011011',
+          '11111111',
+          '01011010',
+          '10000001',
+          '01000010',
+        ],
       ],
     },
 
-    // Bottom-row octopus — the wide, slow one.
+    // Bottom-row octopus — the wide, slow one. Its tentacles swing in and out.
     invaderOcto: {
       w: 12, h: 8, pal: ['', '#ffb066'],
-      rows: [
-        '000011110000',
-        '011111111110',
-        '111111111111',
-        '111001100111',
-        '111111111111',
-        '001110011100',
-        '011001100110',
-        '110000000011',
+      frames: [
+        [ // tentacles out
+          '000011110000',
+          '011111111110',
+          '111111111111',
+          '111001100111',
+          '111111111111',
+          '001110011100',
+          '011001100110',
+          '110000000011',
+        ],
+        [ // tentacles tucked
+          '000011110000',
+          '011111111110',
+          '111111111111',
+          '111001100111',
+          '111111111111',
+          '000110011000',
+          '001101101100',
+          '011000000110',
+        ],
       ],
     },
 
@@ -193,25 +352,6 @@ const Arcade = (() => {
         '311111113',
         '011111110',
         '044444440',
-        '011111110',
-        '011001100',
-        '011001100',
-        '022002200',
-      ],
-    },
-
-    // The armoured cop — visor across the helmet, heavy shoulders.
-    robocop: {
-      w: 9, h: 12, pal: ['', '#8f98a8', '#2b3350', '#5b6478'],
-      rows: [
-        '001111100',
-        '011111110',
-        '012222210',
-        '011111110',
-        '111111111',
-        '113111311',
-        '011111110',
-        '012111210',
         '011111110',
         '011001100',
         '011001100',
@@ -289,12 +429,193 @@ const Arcade = (() => {
         ],
       ],
     },
+
+    // The green-haired little worker. Frames 0-7 are the walk cycle, traced
+    // from the sheet in assets/img: the sheet is a 3x3 of 8x12 cells on a 23px
+    // pixel grid, and the eight distinct poses are the cycle (the ninth cell
+    // repeats the first). Frames 8-9 are the umbrella float, played once it
+    // walks off an edge.
+    //
+    // All ten frames share one 9x14 grid, bottom-aligned: the walker occupies
+    // the lower ten rows and the top four are empty, which is exactly where the
+    // canopy unfolds — so opening the umbrella never moves the body.
+    // Colours are the sheet's own (green, skin, blue); the canopy is the site's
+    // yellow rather than the sheet's pure #ffff00, which glares at this size.
+    lemming: {
+      w: 9, h: 14, pal: ['', '#00b000', '#f0d0d1', '#4040e0', '#ffd93d'],
+      frames: [
+        [ // 0 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '001111000',
+          '001120000',
+          '000222000',
+          '000230000',
+          '000230000',
+          '000230000',
+          '000330000',
+          '002330000',
+          '000220000',
+          '000000000',
+        ],
+        [ // 1 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000101000',
+          '001110000',
+          '001120000',
+          '000222000',
+          '000230000',
+          '002330000',
+          '002330200',
+          '000330200',
+          '003302000',
+          '002200000',
+          '000000000',
+        ],
+        [ // 2 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '001010000',
+          '001110000',
+          '000120000',
+          '000222000',
+          '002230000',
+          '002330000',
+          '022333000',
+          '003333000',
+          '022002200',
+          '000000000',
+        ],
+        [ // 3 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '000110000',
+          '001121000',
+          '001222000',
+          '000230000',
+          '000230000',
+          '002330000',
+          '000330000',
+          '023333000',
+          '020022000',
+          '000000000',
+        ],
+        [ // 4 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '001111000',
+          '001120000',
+          '001222000',
+          '000230000',
+          '000320000',
+          '000230000',
+          '000330000',
+          '002330000',
+          '000220000',
+          '000000000',
+        ],
+        [ // 5 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000101000',
+          '001110000',
+          '001120000',
+          '000222000',
+          '000230000',
+          '000320000',
+          '000320200',
+          '000330200',
+          '003302000',
+          '002200000',
+          '000000000',
+        ],
+        [ // 6 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '001010000',
+          '001110000',
+          '000120000',
+          '000222000',
+          '000320000',
+          '000320000',
+          '000332000',
+          '003333000',
+          '022002200',
+          '000000000',
+        ],
+        [ // 7 — walk
+          '000000000',
+          '000000000',
+          '000000000',
+          '000000000',
+          '000110000',
+          '001121000',
+          '001222000',
+          '000230000',
+          '000230000',
+          '000320000',
+          '000330000',
+          '023333000',
+          '020022000',
+          '000000000',
+        ],
+        [ // 8 — float: canopy open, legs apart
+          '000444000',
+          '044444440',
+          '444444444',
+          '000030000',   // shaft — the gap that stops the canopy reading as a hat
+          '000232000',   // hands gripping it
+          '001111000',   // hair
+          '001122000',
+          '000222000',   // face
+          '000333000',
+          '000333000',
+          '000333000',
+          '000333000',
+          '000303000',
+          '002202200',
+        ],
+        [ // 9 — float: canopy flexed, tips curled, legs swung
+          '000444000',
+          '004444400',
+          '444444444',
+          '440030044',
+          '000232000',
+          '001111000',
+          '001122000',
+          '000222000',
+          '000333000',
+          '000333000',
+          '000333000',
+          '000333000',
+          '000330000',
+          '002200000',
+        ],
+      ],
+    },
   };
 
   // These patrol the bottom of the page permanently, so they're excluded from
   // the random wanderer pool.
-  const GROUND_CREW = ['prince', 'robocop', 'plumber', 'cat'];
-  const NAMES = Object.keys(SPRITES).filter((n) => !GROUND_CREW.includes(n));
+  const GROUND_CREW = ['prince', 'plumber', 'cat'];
+  // The muncher is always on screen too, but it runs lanes across the page
+  // instead of walking the floor, so it gets its own keeper below. Both lists
+  // are kept out of the pool the wanderers are drawn from.
+  const ALWAYS_ON = [...GROUND_CREW, 'muncher', 'lemming'];
+  const NAMES = Object.keys(SPRITES).filter((n) => !ALWAYS_ON.includes(n));
   const PX = 3; // one sprite pixel = 3 CSS px
 
   /* ---------- state ---------- */
@@ -360,11 +681,52 @@ const Arcade = (() => {
     return built;
   }
 
-  /* Which frame to draw. Only the cat is animated: it walks through frames
-   * 0-2, holds frame 1 (legs extended) while airborne, and cycles the two
-   * sitting poses when resting. */
+  /* Which frame to draw. The cat walks through frames 0-2, holds frame 1 (legs
+   * extended) while airborne, and cycles the two sitting poses when resting;
+   * the muncher chomps while it travels and plays its death frames once, on a
+   * clock of its own; the ghosts and invaders flip between two frames. */
   const CAT_AIR_FRAME = 1;
+
+  // Shut, half, wide, half — a mouth that opens and closes, not one that snaps
+  // back to shut from wide.
+  const CHOMP = [0, 1, 2, 1];
+  const CHOMP_FPS = 11;
+  const DIE_FIRST = 3;              // first death frame in muncher.frames
+  const DIE_FRAMES = 6;             // 3..8
+  const DIE_STEP = 0.13;            // seconds per death frame
+  const DIE_DUR = DIE_FRAMES * DIE_STEP;
+
+  const LEM_WALK = 8;          // walk frames 0..7
+  const LEM_WALK_FPS = 11;
+  const LEM_FLOAT_FPS = 5;     // the canopy breathing while it drifts down
+
+  /* Two-frame characters, and how many flips a second each one gets. The ghosts
+   * flow, so theirs is quick and continuous; the invaders keep the slow march
+   * beat of the original, where the whole formation snaps between poses. */
+  const FLIP_FPS = {
+    ghostPink: 6,
+    ghostCyan: 6,
+    invader: 3,
+    invaderSquid: 3.4,   // the top row is the fast one
+    invaderOcto: 2.4,    // the bottom row is the slow one
+  };
+
   function frameFor(s) {
+    if (s.name === 'muncher') {
+      if (s.dying) {
+        const i = Math.floor(s.dieT / DIE_STEP);
+        return DIE_FIRST + Math.min(DIE_FRAMES - 1, i);
+      }
+      // One that has stopped to look around holds its mouth shut.
+      if (s.state === 'stroll' && s.resting) return 0;
+      return CHOMP[Math.floor(s.anim * CHOMP_FPS) % CHOMP.length];
+    }
+    if (s.name === 'lemming') {
+      if (s.floating) return LEM_WALK + (Math.floor(s.anim * LEM_FLOAT_FPS) % 2);
+      return Math.floor(s.anim * LEM_WALK_FPS) % LEM_WALK;
+    }
+    const flip = FLIP_FPS[s.name];
+    if (flip) return Math.floor(s.anim * flip) % 2;
     if (s.name !== 'cat') return 0;
     if (s.sitting) return 3 + (Math.floor(s.anim * 1.2) % 2);
     if (s.vy !== 0) return CAT_AIR_FRAME;
@@ -459,18 +821,103 @@ const Arcade = (() => {
     });
   }
 
+  /* ---------- the muncher ----------
+   * The one character that is always on screen. It runs a lane straight across
+   * the page and turns at the wall rather than leaving, and picks a new lane on
+   * every turn so it works its way over the whole page instead of sawing back
+   * and forth on one line. Smash it and ensureMuncher() brings it back on the
+   * next spawn tick, which leaves a beat before it reappears. */
+
+  const LANE_TOP = 96;          // clear of the header
+  const LANE_DRIFT = 70;        // px/s it slides toward a new lane
+
+  function laneY(h) {
+    const bottom = groundY(h);
+    return LANE_TOP + Math.random() * Math.max(1, bottom - LANE_TOP);
+  }
+
+  function ensureMuncher() {
+    if (cast.some((s) => s.name === 'muncher')) return;
+    const sp = buildSprite('muncher');
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const lane = laneY(sp.h);
+    cast.push({
+      name: 'muncher', w: sp.w, h: sp.h,
+      state: 'munch',
+      // Comes in off the edge rather than popping into existence mid-page.
+      x: dir === 1 ? -sp.w - 8 : innerWidth + 8,
+      y: lane, lane, entered: false,
+      vx: dir * (54 + Math.random() * 22),
+      vy: 0,
+      face: dir, bob: 0, life: 0, hop: 0, hold: 0, anim: 0,
+      dead: false, dying: false, dieT: 0,
+    });
+  }
+
+  /* ---------- the lemmings ----------
+   * These walk along real page elements. Each one is put down on top of one of
+   * the platforms the cat uses, walks until the ground under its feet runs out,
+   * then opens its umbrella and floats down to whatever is below — another
+   * element, or the floor — and carries on walking there. They turn at the
+   * viewport edges rather than leaving, so a pair is always somewhere on screen.
+   *
+   * Nothing here tracks which element it is standing on: support is re-derived
+   * from the live platform list every frame, exactly as the cat's landing is, so
+   * an element that scrolls away or reflows simply drops whoever was on it. */
+
+  const LEM_SPEED = 26;         // px/s — a deliberate plod
+  const LEM_FALL = 58;          // px/s under the umbrella
+  const LEM_DRIFT = 10;         // px/s sideways while floating
+
+  function lemmingCount() {
+    return innerWidth < 861 ? 1 : 2;
+  }
+
+  function ensureLemmings() {
+    const have = cast.filter((s) => s.name === 'lemming').length;
+    if (have >= lemmingCount() || !platforms.length) return;
+    const sp = buildSprite('lemming');
+    const pf = platforms[(Math.random() * platforms.length) | 0];
+    const span = Math.max(1, pf.right - pf.left - sp.w);
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    cast.push({
+      name: 'lemming', w: sp.w, h: sp.h,
+      state: 'lemming',
+      x: pf.left + Math.random() * span,
+      y: pf.top - sp.h,
+      vx: dir * LEM_SPEED,
+      vy: 0,
+      floating: false,
+      face: dir, bob: 0, life: 0, hop: 0, hold: 0, anim: 0,
+      dead: false, dying: false, dieT: 0,
+    });
+  }
+
+  // The platform under a lemming's feet, or null when it's over thin air.
+  function supportUnder(s) {
+    const cx = s.x + s.w / 2;
+    const feet = s.y + s.h;
+    for (const pf of platforms) {
+      if (cx < pf.left || cx > pf.right) continue;
+      if (Math.abs(feet - pf.top) < 3) return pf;
+    }
+    return null;
+  }
+
   function spawn() {
-    // Ground crew never counts against the wanderer cap, or they'd starve it.
-    if (cast.filter((s) => s.state !== 'ground').length >= maxCast) return;
+    // The always-on characters never count against the wanderer cap, or they'd
+    // starve it.
+    if (cast.filter((s) => !ALWAYS_ON.includes(s.name)).length >= maxCast) return;
 
     const name = NAMES[(Math.random() * NAMES.length) | 0];
     const s = buildSprite(name);
     const roll = Math.random();
     const sprite = {
       name, w: s.w, h: s.h,
-      face: 1, bob: 0, life: 0,
+      face: 1, bob: 0, life: 0, anim: 0,
       vx: 0, vy: 0, hop: 0,
       state: 'stroll', hold: 0, dead: false,
+      dying: false, dieT: 0,
     };
 
     if (roll < 0.34) {
@@ -511,6 +958,18 @@ const Arcade = (() => {
   function stepCast(dt) {
     for (let i = cast.length - 1; i >= 0; i--) {
       const s = cast[i];
+
+      // Dying freezes it where it stands — no walking, no bob, no looking at
+      // the cursor — and the collapse plays out on its own clock.
+      if (s.dying) {
+        s.dieT += dt;
+        if (s.dieT >= DIE_DUR) {
+          sparkle(s.x + s.w / 2, s.y + s.h / 2, SPRITES[s.name].pal[1]);
+          cast.splice(i, 1);
+        }
+        continue;
+      }
+
       s.life += dt;
       s.bob += dt * 6;
       s.anim = (s.anim || 0) + dt;
@@ -669,6 +1128,71 @@ const Arcade = (() => {
           if (s.y >= s.groundY) { s.y = s.groundY; s.vy = 0; }
         }
 
+      } else if (s.state === 'lemming') {
+        if (!s.floating) {
+          s.x += s.vx * dt;
+          // Turn at the viewport walls rather than walking off the page.
+          if (s.x <= 2) { s.x = 2; s.vx = Math.abs(s.vx); }
+          else if (s.x >= innerWidth - s.w - 2) { s.x = innerWidth - s.w - 2; s.vx = -Math.abs(s.vx); }
+          s.face = s.vx > 0 ? 1 : -1;
+
+          // Walked off the end of whatever it was on: out comes the umbrella.
+          // The floor is the one surface it can't walk off.
+          const onFloor = Math.abs(s.y - groundY(s.h)) < 3;
+          if (!onFloor && !supportUnder(s)) {
+            s.floating = true;
+            s.vy = LEM_FALL;
+            s.anim = 0;              // start the canopy cycle on frame 8
+          }
+        } else {
+          const prevFeet = s.y + s.h;
+          s.y += s.vy * dt;
+          // Umbrellas drift. It keeps its heading so it carries on the same way
+          // once it touches down.
+          s.x += Math.sign(s.vx || 1) * LEM_DRIFT * dt;
+          s.x = Math.max(2, Math.min(s.x, innerWidth - s.w - 2));
+          const feet = s.y + s.h;
+
+          // Land on the highest surface its feet crossed this frame, otherwise
+          // ride down to the floor.
+          const cx = s.x + s.w / 2;
+          let landed = null;
+          for (const pf of platforms) {
+            if (cx < pf.left || cx > pf.right) continue;
+            if (prevFeet <= pf.top + 2 && feet >= pf.top - 0.5) {
+              if (!landed || pf.top < landed.top) landed = pf;
+            }
+          }
+          const gy = groundY(s.h);
+          if (landed) s.y = landed.top - s.h;
+          else if (s.y >= gy) { s.y = gy; landed = true; }
+
+          if (landed) {
+            s.floating = false;
+            s.vy = 0;
+            s.vx = Math.sign(s.vx || 1) * LEM_SPEED;
+          }
+        }
+
+      } else if (s.state === 'munch') {
+        s.x += s.vx * dt;
+        // It starts off the edge, so the turn-at-the-wall rule only applies once
+        // it is fully on screen — otherwise it would bounce off its own entrance.
+        if (!s.entered && s.x > 4 && s.x < innerWidth - s.w - 4) s.entered = true;
+        if (s.entered) {
+          if (s.x <= 4) { s.x = 4; s.vx = Math.abs(s.vx); s.lane = laneY(s.h); }
+          else if (s.x >= innerWidth - s.w - 4) {
+            s.x = innerWidth - s.w - 4; s.vx = -Math.abs(s.vx); s.lane = laneY(s.h);
+          }
+        }
+        s.face = s.vx > 0 ? 1 : -1;
+        // Slide toward the current lane instead of jumping to it, so a turn
+        // reads as changing corridor rather than teleporting.
+        const dLane = s.lane - s.y;
+        if (Math.abs(dLane) > 1) {
+          s.y += Math.sign(dLane) * Math.min(Math.abs(dLane), LANE_DRIFT * dt);
+        }
+
       } else if (s.state === 'peek') {
         s.peekT += dt;
         // rise out, hold, drop back behind the anchor
@@ -684,9 +1208,12 @@ const Arcade = (() => {
         }
       }
 
-      // Look toward the cursor while idle (fine pointers only). The ground crew
-      // is excluded — they must face the way they walk, or they moonwalk.
-      if (finePointer && pointer.x > -1e3 && s.state !== 'ground' && s.state !== 'cat') {
+      // Look toward the cursor while idle (fine pointers only). Anyone on a
+      // fixed heading is excluded — they must face the way they travel, or they
+      // moonwalk (and a muncher would be chomping backwards).
+      if (finePointer && pointer.x > -1e3 &&
+          s.state !== 'ground' && s.state !== 'cat' &&
+          s.state !== 'munch' && s.state !== 'lemming') {
         const dx = pointer.x - (s.x + s.w / 2);
         if (Math.abs(dx) > 24 && (s.state !== 'stroll' || s.resting)) {
           s.face = dx > 0 ? 1 : -1;
@@ -700,8 +1227,9 @@ const Arcade = (() => {
   function drawCast() {
     for (const s of cast) {
       const sp = buildSprite(s.name, frameFor(s));
-      const walking = (s.state === 'stroll' && !s.resting) ||
-                      ((s.state === 'ground' || s.state === 'cat') && s.vy === 0);
+      const walking = !s.dying &&
+                      ((s.state === 'stroll' && !s.resting) ||
+                       ((s.state === 'ground' || s.state === 'cat') && s.vy === 0));
       const bob = walking ? Math.round(Math.sin(s.bob) * 1.5) : 0;
       const hop = s.hop > 0 ? -Math.sin(s.hop * Math.PI) * 10 : 0;
 
@@ -716,6 +1244,7 @@ const Arcade = (() => {
   // A click anywhere makes the nearest characters turn and hop toward it.
   function reactTo(x, y) {
     const near = cast
+      .filter((s) => !s.dying)
       .map((s) => ({ s, d: Math.hypot(s.x + s.w / 2 - x, s.y + s.h / 2 - y) }))
       .sort((a, b) => a.d - b.d)
       .slice(0, 2);
@@ -841,10 +1370,29 @@ const Arcade = (() => {
   function hitTestCast(x, y) {
     for (let i = cast.length - 1; i >= 0; i--) {
       const s = cast[i];
+      // One that is already coming apart shouldn't keep swallowing clicks —
+      // let them through to whatever is behind it.
+      if (s.dying) continue;
       if (x >= s.x - 6 && x <= s.x + s.w + 6 &&
           y >= s.y - 6 && y <= s.y + s.h + 6) return i;
     }
     return -1;
+  }
+
+  /* A hammer blow on the muncher plays its own death animation instead of
+   * bursting into debris — that collapse is the character's signature, and the
+   * spark burst at the end still pays the hit off. Everyone else explodes. */
+  function hitCast(index, x, y) {
+    const s = cast[index];
+    if (s.name !== 'muncher') return explodeSprite(index);
+    if (s.dying) return false;
+    s.dying = true;
+    s.dieT = 0;
+    s.vx = 0;
+    s.vy = 0;
+    s.hop = 0;
+    shock(x, y);
+    return true;
   }
 
   function explodeSprite(index) {
@@ -872,6 +1420,33 @@ const Arcade = (() => {
     }
     shock(s.x + s.w / 2, s.y + s.h / 2);
     return true;
+  }
+
+  /* ---------- spark burst ----------
+   * By its last death frame the muncher is a single pixel wide, so there is
+   * nothing left of the sprite to scatter the way explodeSprite() does. This is
+   * a symmetric burst of sparks instead: rays out from the middle, which is what
+   * the original shows as the round ends. */
+
+  function sparkle(cx, cy, colour) {
+    const RAYS = 10;
+    for (let r = 0; r < RAYS; r++) {
+      const a = (Math.PI * 2 * r) / RAYS;
+      for (let k = 1; k <= 3; k++) {
+        if (particles.length >= MAX_PARTICLES) break;
+        const px = cx + Math.cos(a) * k * PX + scrollX;
+        const py = cy + Math.sin(a) * k * PX + scrollY;
+        const speed = 70 + k * 55;
+        particles.push({
+          x: px, y: py, ox: px, oy: py,
+          vx: Math.cos(a) * speed,
+          vy: Math.sin(a) * speed - 60,
+          size: PX, colour, el: null, transient: true, settled: false,
+          floor: scrollY + innerHeight - 4,
+        });
+      }
+    }
+    shock(cx, cy);
   }
 
   /* ---------- impact shockwave ---------- */
@@ -1028,6 +1603,8 @@ const Arcade = (() => {
       if (spawnTimer <= 0) {
         spawnTimer = 1.4 + Math.random() * 3.2;
         ensureGroundCrew(); // brings back anyone who got smashed
+        ensureMuncher();
+        ensureLemmings();
         spawn();
       }
       stepCast(dt);
@@ -1085,6 +1662,21 @@ const Arcade = (() => {
       else maxCast = DENSITY[cfg.density] || DENSITY.normal;
       // The floor moved, and on mobile the tab bar changes the clearance.
       for (const s of cast) {
+        if (s.state === 'lemming') {
+          // The layout just moved under it. Nothing to reposition — the support
+          // check re-derives from the new platform list next frame and it either
+          // keeps walking or opens the umbrella — but it must stay on screen.
+          s.x = Math.max(2, Math.min(s.x, innerWidth - s.w - 2));
+          s.y = Math.min(s.y, groundY(s.h));
+          continue;
+        }
+        if (s.state === 'munch') {
+          // Its lane may now be below the floor, or off the right edge.
+          s.lane = Math.min(s.lane, groundY(s.h));
+          s.y = Math.min(s.y, groundY(s.h));
+          if (s.entered) s.x = Math.min(s.x, Math.max(4, innerWidth - s.w - 4));
+          continue;
+        }
         if (s.state !== 'ground') continue;
         s.groundY = groundY(s.h);
         if (s.vy === 0) s.y = s.groundY;
@@ -1109,7 +1701,7 @@ const Arcade = (() => {
       if (hit !== -1) {
         e.preventDefault();
         e.stopPropagation();
-        explodeSprite(hit);
+        hitCast(hit, e.clientX, e.clientY);
         kick();
         return;
       }
@@ -1136,7 +1728,12 @@ const Arcade = (() => {
     ready = true;
     // Only when the layer is actually on — otherwise a visitor who switched
     // the characters off still gets the bottom crew back on every reload.
-    if (arcadeOn) { refreshPlatforms(); ensureGroundCrew(); }
+    if (arcadeOn) {
+      refreshPlatforms();
+      ensureGroundCrew();
+      ensureMuncher();
+      ensureLemmings();   // needs the platform list above
+    }
     kick();
   }
 
@@ -1164,15 +1761,24 @@ const Arcade = (() => {
     _frameFor: frameFor,
     _platforms: () => platforms.map((p) => ({ top: Math.round(p.top), left: Math.round(p.left), right: Math.round(p.right) })),
     _cat: () => cast.find((s) => s.name === 'cat'),
+    _munch: () => cast.find((s) => s.name === 'muncher'),
+    _lemmings: () => cast.filter((s) => s.name === 'lemming'),
     _spawnNamed: (name) => {
       const s = buildSprite(name);
       cast.push({
-        name, w: s.w, h: s.h, face: 1, bob: 0, life: 0, vx: 0, vy: 0, hop: 0,
+        name, w: s.w, h: s.h, face: 1, bob: 0, life: 0, anim: 0,
+        vx: 0, vy: 0, hop: 0,
         state: 'stroll', resting: true, pause: 99, hold: 0, dead: false,
+        dying: false, dieT: 0,
         x: innerWidth / 2, y: innerHeight / 2,
       });
       kick();
       return cast[cast.length - 1];
+    },
+    _hit: (i) => {
+      const r = hitCast(i, cast[i].x + cast[i].w / 2, cast[i].y + cast[i].h / 2);
+      kick();
+      return r;
     },
   };
 })();

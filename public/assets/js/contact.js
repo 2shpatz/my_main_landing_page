@@ -77,9 +77,9 @@ const Contact = (() => {
     if (Render.has(m.email)) {
       bits.push(`<a href="mailto:${Render.esc(m.email)}" class="ltr">${Render.esc(m.email)}</a>`);
     }
-    if (Render.has(m.whatsapp)) {
-      bits.push(`<a href="https://wa.me/${Render.esc(m.whatsapp)}" target="_blank"
-        rel="noopener noreferrer">וואטסאפ</a>`);
+    // Same as the aside row: a button, so the number stays out of the markup.
+    if (Render.whatsapp()) {
+      bits.push('<button type="button" class="link-btn" data-wa="plain">וואטסאפ</button>');
     }
     return bits.join(' · ');
   }
@@ -104,7 +104,7 @@ const Contact = (() => {
         text = lines.join('\n');
       }
     }
-    return `https://wa.me/${C.meta.whatsapp}?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/${Render.whatsapp()}?text=${encodeURIComponent(text)}`;
   }
 
   /* ---------- submit ---------- */
@@ -193,12 +193,18 @@ const Contact = (() => {
       });
     }
 
-    const wa = document.getElementById('wa-btn');
-    if (wa) {
-      wa.addEventListener('click', () => {
-        open(whatsappUrl(document.getElementById('contact-form')), '_blank', 'noopener');
-      });
-    }
+    // Every WhatsApp affordance goes through here. Delegated because some of them
+    // (the error-message fallback) are written into the DOM after this runs, and
+    // because the number only exists for the instant it takes to open the tab:
+    //   data-wa="form"  — the big CTA, carries whatever is typed in the form
+    //   data-wa="plain" — the direct row and the fallback, default message only
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('[data-wa]');
+      if (!trigger) return;
+      e.preventDefault();
+      const form = trigger.dataset.wa === 'form' ? document.getElementById('contact-form') : null;
+      open(whatsappUrl(form), '_blank', 'noopener');
+    });
 
     // Copy buttons (Bit / PayBox numbers).
     document.addEventListener('click', async (e) => {
