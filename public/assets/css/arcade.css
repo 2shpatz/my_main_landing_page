@@ -24,32 +24,46 @@
   pointer-events: none;
 }
 
-/* ---------- control cluster ---------- */
+/* ---------- control cluster ----------
+ * Mobile: two icon-only circles parked in the header band, on the free
+ * inline-end side opposite the brand. They're fixed rather than nested in
+ * .site-header because a scrolled header carries backdrop-filter, which would
+ * make it the containing block and break the desktop cluster's positioning.
+ * The inline offset mirrors .container's padding so they line up with the
+ * header content. Desktop: the original pill cluster, bottom inline-start. */
 
 .arcade-ctl {
   position: fixed;
-  inset-inline-start: clamp(12px, 3vw, 22px);
-  inset-block-end: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 14px);
+  inset-block-start: 0;
+  inset-inline-end: clamp(18px, 5vw, 40px);
+  height: var(--header-height);
   z-index: 320;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
 }
 
 @media (min-width: 861px) {
   .arcade-ctl {
+    inset-block-start: auto;
+    inset-inline-end: auto;
+    inset-inline-start: clamp(12px, 3vw, 22px);
     inset-block-end: clamp(16px, 3vw, 28px);
-    flex-direction: row;
+    height: auto;
   }
 }
 
 .arcade-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
+  width: 44px;
+  height: 44px;
   min-height: 44px;
-  padding: 9px 15px;
-  border-radius: var(--radius-pill);
+  padding: 0;
+  border-radius: 50%;
   background: var(--bg-glass);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
@@ -66,10 +80,31 @@
     transform var(--dur-fast) var(--ease-spring);
 }
 
+/* On mobile the button is the icon, so the name lives only in aria-label
+   (both buttons get one, kept in sync with their pressed state). */
+.arcade-btn > span { display: none; }
+
 .arcade-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   flex-shrink: 0;
+}
+
+@media (min-width: 861px) {
+  .arcade-btn {
+    justify-content: flex-start;
+    width: auto;
+    height: auto;
+    padding: 9px 15px;
+    border-radius: var(--radius-pill);
+  }
+
+  .arcade-btn > span { display: inline; }
+
+  .arcade-btn svg {
+    width: 17px;
+    height: 17px;
+  }
 }
 
 .arcade-btn:hover {
@@ -87,7 +122,7 @@
   box-shadow: var(--shadow-glow);
 }
 
-/* Dim the label when the cast is switched off, so the state reads at a glance. */
+/* Dim the button when the cast is switched off, so the state reads at a glance. */
 #arcade-toggle[aria-pressed="false"] { opacity: 0.72; }
 
 /* ---------- hammer ---------- */
