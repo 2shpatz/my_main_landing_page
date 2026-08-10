@@ -21,12 +21,11 @@ const Arcade = (() => {
 
   /* ---------- palette (drawn from tokens.css so the cast belongs here) ---------- */
 
-  const SILVER = '#d1d7e0';
-  const METAL = '#8b83a8';
-  const CORAL = '#ff8a5b';
-  const PINK = '#ff5f96';
-  const DARK = '#2d283e';
-  const GINGER = '#e09a6a';
+  // Only the brand colours live here; each character's own colours are game
+  // colours and stay in its sprite grid. METAL, DARK and GINGER used to sit here
+  // unreferenced and named a palette the site no longer uses, so they're gone.
+  const LIGHT = '#f5d5e0';        // --text-primary
+  const ACCENT = '#c874b2';       // --accent-secondary
 
   /* ---------- the cast ----------
    * Familiar arcade archetypes from the late 70s / early 80s, hand-drawn here
@@ -325,7 +324,7 @@ const Arcade = (() => {
 
     // Player ship from the fixed shooters.
     ship: {
-      w: 11, h: 8, pal: ['', SILVER, PINK],
+      w: 11, h: 8, pal: ['', LIGHT, ACCENT],
       rows: [
         '00000100000',
         '00001110000',
@@ -338,26 +337,7 @@ const Arcade = (() => {
       ],
     },
 
-    // ---- ground crew: these two always patrol the bottom of the page ----
-
-    // The acrobat prince — white tunic, red sash.
-    prince: {
-      w: 9, h: 12, pal: ['', '#f2ede4', '#2d283e', '#e8b07a', '#c9443a'],
-      rows: [
-        '002222200',
-        '023333320',
-        '023333320',
-        '002333200',
-        '011111110',
-        '311111113',
-        '011111110',
-        '044444440',
-        '011111110',
-        '011001100',
-        '011001100',
-        '022002200',
-      ],
-    },
+    // ---- ground crew: these always patrol the bottom of the page ----
 
     // The alley cat. These five grids were traced automatically from the
     // game's own walk/sit frames (the source JPEGs were deleted once traced —
@@ -367,7 +347,7 @@ const Arcade = (() => {
     // All frames share one scale and are bottom/right-aligned, so the head
     // stays put while the legs and tail move and the cat never changes size.
     // Orange rather than the original's black, by request — and it reads far
-    // better than black on the #2d283e background.
+    // better than black would on the dark #210535 background.
     // Frames 0-2 walk, 3-4 sit.
     cat: {
       w: 17, h: 9, pal: ['', '#f0913c'],
@@ -610,7 +590,7 @@ const Arcade = (() => {
 
   // These patrol the bottom of the page permanently, so they're excluded from
   // the random wanderer pool.
-  const GROUND_CREW = ['prince', 'plumber', 'cat'];
+  const GROUND_CREW = ['plumber', 'cat'];
   // The muncher is always on screen too, but it runs lanes across the page
   // instead of walking the floor, so it gets its own keeper below. Both lists
   // are kept out of the pool the wanderers are drawn from.
@@ -769,7 +749,7 @@ const Arcade = (() => {
   }
 
   /* ---------- ground crew ----------
-   * The prince and the cop walk the bottom of the viewport and jump now and
+   * The plumber and the cat walk the bottom of the viewport and jump now and
    * then. Unlike the wanderers they turn at the edges instead of leaving, so
    * they're always there. Smash one and it walks back on at the next spawn
    * tick, which gives a natural couple of seconds before it returns. */
@@ -1305,7 +1285,7 @@ const Arcade = (() => {
     const m = c.match(/rgba?\(([^)]+)\)/);
     if (m) {
       const parts = m[1].split(',').map((n) => parseFloat(n));
-      if (parts.length > 3 && parts[3] === 0) return CORAL;
+      if (parts.length > 3 && parts[3] === 0) return ACCENT;
     }
     return c;
   }
@@ -1466,7 +1446,7 @@ const Arcade = (() => {
       const k = s.t / 0.32;
       const r = 6 + k * 34;
       fxCtx.globalAlpha = 1 - k;
-      fxCtx.strokeStyle = SILVER;
+      fxCtx.strokeStyle = LIGHT;
       fxCtx.lineWidth = 3;
       // Square ring rather than a circle — reads as pixel art, not a bubble.
       fxCtx.strokeRect(Math.round(s.x - r), Math.round(s.y - r), Math.round(r * 2), Math.round(r * 2));

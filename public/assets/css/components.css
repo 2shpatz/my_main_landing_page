@@ -247,7 +247,7 @@
 }
 
 .btn-primary:hover {
-  box-shadow: 0 16px 48px rgba(255, 95, 150, 0.42);
+  box-shadow: 0 16px 48px rgba(200, 116, 178, 0.46);
   transform: translateY(-2px);
 }
 
@@ -419,7 +419,7 @@
   outline: none;
   border-color: var(--accent-primary);
   background: var(--sheen-mid);
-  box-shadow: 0 0 0 3px rgba(255, 138, 91, 0.16);
+  box-shadow: 0 0 0 3px rgba(214, 145, 192, 0.24);
 }
 
 .field input[type="email"],
@@ -497,7 +497,8 @@
 .spinner {
   width: 17px;
   height: 17px;
-  border: 2px solid rgba(45, 40, 62, 0.3);
+  /* Sits on a filled button, so the track is the ink colour at low alpha. */
+  border: 2px solid rgba(33, 5, 53, 0.3);
   border-top-color: var(--on-accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;

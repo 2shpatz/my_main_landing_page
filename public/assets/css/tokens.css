@@ -2,56 +2,95 @@
  * Change a value here and it propagates everywhere.
  * ======================================================= */
 
-/* Base palette — dark metal.
- *   #2D283E  plum-black    background
- *   #4C495D  dark slate    raised surfaces
- *   #564F6F  metal         borders, structure, the third accent slot
- *   #D1D7E0  cool silver   text
- * The source palette's vivid purple (#802BB1) is deliberately unused; the
- * metal shades take its place, and warm coral is the only saturated colour. */
+/* ==== Palette ====
+ * The five requested colours, and nothing else:
+ *   #210535  darkest   the page, and the margins beside the photo
+ *   #430D4B  dark      raised surfaces
+ *   #7B337D  mid       accent fills, the timeline rule
+ *   #C874B2  accent    button and tab fills, icons, glows
+ *   #F5D5E0  light     body text
+ *
+ * The page background is assets/img/background.jpg, filling the screen (`cover`)
+ * and UNSCRIMMED, by request — the photo as shot.
+ *
+ * What that costs, measured: the lightning peaks at luminance 0.997, so light
+ * text crossing a streak falls to ~1.1:1, far under the 4.5:1 AA floor. Text over
+ * the dark parts of the frame is fine (13.6:1). The fix, if it turns out to read
+ * badly, is one value: --bg-scrim back to rgba(33, 5, 53, 0.84), which measured
+ * text 8.8:1 · secondary 6.0:1 · muted 4.8:1 · accent 4.9:1 over every pixel.
+ *
+ * Two tokens are derived rather than given, because the palette has no colour
+ * between #C874B2 and #F5D5E0 and both jobs need one:
+ *   --text-secondary / --text-muted  #F5D5E0 blended toward #210535
+ *   --accent-primary #d691c0         #C874B2 lifted 30% toward #F5D5E0, because
+ *                                    #C874B2 itself is 3.75:1 over the photo —
+ *                                    fine for fills, short of AA for text. */
 
 :root {
-  /* ---- Metal ramp ---- */
-  --metal: #564f6f;
-  --metal-dim: #4c495d;
-  --metal-bright: #6e6689;
+  /* ---- The five, by name ---- */
+  --plum-darkest: #210535;
+  --plum-dark: #430d4b;
+  --plum-mid: #7b337d;
+  --plum-accent: #c874b2;
+  --plum-light: #f5d5e0;
+
+  /* ---- Background photo + its scrim ----
+   * Two files, because one aspect ratio cannot serve both: background.jpg is
+   * portrait (736x1308) and suits a phone; background_pc.png is landscape
+   * (1376x768) and is swapped in below at the desktop breakpoint. `cover` on a
+   * wide screen would otherwise crop the portrait down to a narrow centre band.
+   *
+   * The scrim is back on. It is the single dial for legibility: unscrimmed, text
+   * crossing the bright lightning measured ~1.1:1, with 5.6% of the desktop frame
+   * under the 4.5:1 AA floor. 0.84 is the LOWEST value that clears AA for all
+   * four text tones across every pixel of both photos — 0.78 still left the muted
+   * and accent tones short (3.9:1), so don't lower it without re-measuring. */
+  --bg-image: url('../img/background.jpg');
+  --bg-scrim: rgba(33, 5, 53, 0.60);
 
   /* ---- Surfaces ---- */
-  --bg-primary: #2d283e;
-  --bg-elevated: #3a3550;
-  --bg-card: rgba(209, 215, 224, 0.055);
-  --bg-card-hover: rgba(209, 215, 224, 0.095);
-  --bg-glass: rgba(45, 40, 62, 0.74);
+  --bg-primary: #210535;
+  --bg-elevated: #430d4b;
+  --bg-card: rgba(245, 213, 224, 0.06);
+  --bg-card-hover: rgba(245, 213, 224, 0.1);
+  --bg-glass: rgba(33, 5, 53, 0.82);
 
-  /* ---- Text (all ≥4.5:1 on --bg-primary) ---- */
-  --text-primary: #d1d7e0;
-  --text-secondary: #aeb4c4;
-  --text-muted: #9297aa;
+  /* ---- Text: the palette's lightest, then blended toward the darkest ---- */
+  --text-primary: #f5d5e0;
+  --text-secondary: #cfb0c1;
+  --text-muted: #ba9bb0;
 
-  /* ---- Accents: warm coral is the only saturated colour on the page ---- */
-  --accent-primary: #ff8a5b;
-  --accent-secondary: #ff5f96;
-  --accent-tertiary: var(--metal);
+  /* ---- Accents ----
+   * primary is the one used for text, so it is #c874b2 lifted enough to clear AA
+   * over the photo; secondary is #c874b2 exactly, for fills and icons. */
+  --accent-primary: #d691c0;
+  --accent-secondary: #c874b2;
+  --accent-tertiary: var(--plum-mid);
 
-  --gradient-primary: linear-gradient(135deg, #ffab6b 0%, #ff8a5b 45%, #ff5f96 100%);
-  --gradient-warm: linear-gradient(120deg, #ffb066 0%, #ff6b9d 100%);
-  --gradient-text: linear-gradient(100deg, #ffc182 0%, #ff8a5b 40%, #ff5f96 100%);
-  --gradient-metal: linear-gradient(135deg, #6e6689 0%, #564f6f 50%, #4c495d 100%);
+  /* Filled controls stay inside the BRIGHT end of the palette and carry dark ink.
+     The alternative — a dark #430d4b..#7b337d fill with light ink — reads at only
+     2.3:1 against the page, so the button loses its edge; this way it sits at
+     5.8:1 and the ink is 5.1-7.6:1 across every stop. */
+  --gradient-primary: linear-gradient(135deg, #d691c0 0%, #c874b2 55%, #bc6aaa 100%);
+  --gradient-warm: linear-gradient(120deg, #d691c0 0%, #c874b2 100%);
+  /* Headings: light end, so the gradient text stays readable over the photo. */
+  --gradient-text: linear-gradient(100deg, #f5d5e0 0%, #e6b0cf 45%, #c874b2 100%);
 
-  /* Text sitting on top of a coral accent fill. */
-  --on-accent: #2d283e;
+  /* Ink on those fills — dark, since they are the light end of the palette. */
+  --on-accent: #210535;
 
   /* ---- Light overlays ----
-   * Tinted with the palette's silver rather than pure white, so raised
-   * surfaces read as metal instead of grey haze. */
-  --sheen: rgba(209, 215, 224, 0.05);
-  --sheen-mid: rgba(209, 215, 224, 0.07);
-  --sheen-strong: rgba(209, 215, 224, 0.1);
+   * Tinted with the palette's lightest rather than pure white, so raised
+   * surfaces warm toward the pink instead of going grey. */
+  --sheen: rgba(245, 213, 224, 0.05);
+  --sheen-mid: rgba(245, 213, 224, 0.07);
+  --sheen-strong: rgba(245, 213, 224, 0.1);
 
   /* ---- State colours ----
-   * Pulled toward the palette: the error red leans to the accent pink, the
-   * success green is desaturated to sit on plum, the notice is the warm amber
-   * already used at the top of --gradient-text. */
+   * Left off-palette on purpose: an error has to read as an error, so these stay
+   * red / green / amber rather than being tinted purple. All of them still clear
+   * 4.5:1 on the purple base (measured: danger 6.6:1, success 9.8:1, notice
+   * 11.8:1), so none of them needed adjusting for the new background. */
   --danger: #ff7a8a;
   --danger-text: #ffb3bd;
   --danger-soft: rgba(255, 122, 138, 0.12);
@@ -70,9 +109,9 @@
   --brand-whatsapp: #25d366;
   --brand-whatsapp-ink: #08331a;
 
-  /* ---- Borders: metal-tinted rather than plain white ---- */
-  --border-subtle: rgba(209, 215, 224, 0.11);
-  --border-strong: rgba(209, 215, 224, 0.2);
+  /* ---- Borders: tinted with the palette's lightest, not plain white ---- */
+  --border-subtle: rgba(245, 213, 224, 0.13);
+  --border-strong: rgba(245, 213, 224, 0.24);
 
   /* ---- Radii ---- */
   --radius-sm: 10px;
@@ -85,7 +124,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
   --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.44);
-  --shadow-glow: 0 12px 40px rgba(255, 95, 150, 0.28);
+  --shadow-glow: 0 12px 40px rgba(200, 116, 178, 0.34);
 
   /* ---- Motion ----
    * Durations are referenced by JS too (router reads --dur-med). */
@@ -117,12 +156,32 @@
   --fs-xs: 0.98rem;
 }
 
+/* The desktop background. 861px is the same breakpoint the desktop nav and the
+   hero grid switch at, so the wide artwork arrives with the wide layout.
+   Only one of the two files is ever fetched: a background-image behind an unused
+   media query is not downloaded.
+
+   WebP, not the PNG it was exported as: same pixels to within a max per-channel
+   difference of 12/255 (PSNR 41 dB), 280KB instead of 1.9MB. PNG is a lossless
+   container built for flat graphics, and it was spending 1.6MB encoding star
+   noise. The .png is still in assets/img and is now unreferenced.
+
+   NOTE for the next time this artwork changes: /assets/img/* is cached for a week
+   by public/_headers, so replacing a file in place does NOT reach anyone who has
+   already visited. Either change the filename, or bump a query string here
+   (…/background_pc.webp?v=2) — that is enough to make it a new URL. */
+@media (min-width: 861px) {
+  :root {
+    --bg-image: url('../img/background_pc.webp');
+  }
+}
+
 /* Respect an explicit OS light-mode preference without a full second theme:
    lift the surfaces just enough to stay readable in bright sun on a phone. */
 @media (prefers-contrast: more) {
   :root {
-    --text-secondary: #ded9e8;
-    --text-muted: #b0a9c2;
-    --border-subtle: rgba(255, 255, 255, 0.2);
+    --text-secondary: #f0cfdd;
+    --text-muted: #dcb8cb;
+    --border-subtle: rgba(245, 213, 224, 0.26);
   }
 }

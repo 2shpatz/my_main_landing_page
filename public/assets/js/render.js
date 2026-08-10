@@ -307,7 +307,7 @@ const Render = (() => {
     document.getElementById('view-support').innerHTML = `
       <div class="container">
         <div class="section-head reveal">
-          <span class="eyebrow">תמיכה</span>
+          <span class="eyebrow">תנו לשפינדל יד</span>
           <h2>תמיכה בי! מה חשבתם? יש לי פיות להאכיל...</h2>
           <p>${esc(s.intro)}</p>
         </div>

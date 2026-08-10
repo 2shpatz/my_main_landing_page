@@ -183,7 +183,31 @@ ul, ol { list-style: none; }
   z-index: -2;
   overflow: hidden;
   pointer-events: none;
+
+  /* The photo lives on this fixed layer rather than on <body> with
+     background-attachment: fixed — iOS Safari does not honour that with a scaled
+     background and reflows it on every scroll. Here it simply never moves.
+
+     `cover`: the photo fills the screen edge to edge. It is portrait (736x1308),
+     so a landscape viewport shows a centre band of it rather than the whole
+     frame — `contain` showed all of it but left the sides empty, which read worse.
+
+     The scrim is OFF by request — the photo is meant to be seen as it is. Be
+     aware of what that costs: the lightning peaks at luminance 0.997, so text
+     crossing a streak sits at ~1.1:1 against it. Set --bg-scrim back to
+     rgba(33, 5, 53, 0.84) to restore AA everywhere. */
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(var(--bg-scrim), var(--bg-scrim)), var(--bg-image);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
 }
+
+/* The spotlights and the grain both sat ON TOP of the photo, tinting it. With
+   the photo showing through unscrimmed they would be the "colour over it" that
+   is not wanted, so they are off. Delete these two rules to bring them back. */
+.orb,
+.bg-grain { display: none; }
 
 .orb {
   position: absolute;
@@ -194,23 +218,25 @@ ul, ol { list-style: none; }
   transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
 }
 
+/* Spotlights: dark purple pools that drift over the photo. They sit ABOVE the
+   scrim, so they only ever deepen the background — they never lift it back
+   toward the bright end and undo the contrast the scrim just bought. */
 .orb-1 {
   width: 62vmax; height: 62vmax;
   inset-block-start: -22vmax; inset-inline-end: -18vmax;
-  background: radial-gradient(circle closest-side, rgba(255, 138, 91, 0.34), transparent 72%);
+  background: radial-gradient(circle closest-side, rgba(67, 13, 75, 0.72), transparent 72%);
   animation: drift-a 22s var(--ease-in-out) infinite alternate;
 }
 .orb-2 {
   width: 54vmax; height: 54vmax;
   inset-block-end: -20vmax; inset-inline-start: -16vmax;
-  /* Metal, not purple — this orb carries the palette's slate tone. */
-  background: radial-gradient(circle closest-side, rgba(110, 102, 137, 0.5), transparent 72%);
+  background: radial-gradient(circle closest-side, rgba(33, 5, 53, 0.8), transparent 72%);
   animation: drift-b 27s var(--ease-in-out) infinite alternate;
 }
 .orb-3 {
   width: 42vmax; height: 42vmax;
   inset-block-start: 32%; inset-inline-start: 28%;
-  background: radial-gradient(circle closest-side, rgba(255, 95, 150, 0.24), transparent 72%);
+  background: radial-gradient(circle closest-side, rgba(123, 51, 125, 0.34), transparent 72%);
   animation: drift-c 19s var(--ease-in-out) infinite alternate;
 }
 

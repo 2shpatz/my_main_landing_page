@@ -373,7 +373,7 @@
   height: 12px;
   border-radius: 50%;
   background: var(--gradient-warm);
-  box-shadow: 0 0 0 4px var(--bg-primary), 0 0 16px rgba(255, 138, 91, 0.6);
+  box-shadow: 0 0 0 4px var(--bg-primary), 0 0 16px rgba(200, 116, 178, 0.7);
 }
 
 .timeline-year {

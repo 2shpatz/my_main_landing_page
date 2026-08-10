@@ -222,7 +222,7 @@ const SITE_CONTENT = {
   nav: [
     { id: 'about', label: 'קצת עלי', icon: 'user' },
     { id: 'projects', label: 'הפרויקטים שלי', icon: 'grid' },
-    { id: 'support', label: 'תמיכה', icon: 'heart' },
+    { id: 'support', label: 'תנו לשפינדל יד', icon: 'heart' },
     { id: 'contact', label: 'צור קשר', icon: 'mail' },
   ],
 
