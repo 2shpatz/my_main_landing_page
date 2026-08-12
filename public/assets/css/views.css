@@ -341,6 +341,170 @@
   line-height: 1.7;
 }
 
+.highlight-card .h-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.highlight-card .h-list li {
+  position: relative;
+  padding-inline-start: 18px;
+}
+
+.highlight-card .h-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  opacity: .75;
+}
+
+/* ---- Photo pile ----
+ * A stack of prints tossed on a table. Depth is DOM order: :nth-child(1) is on
+ * top, and each one behind is pushed back, rotated a little and dimmed. Photos
+ * browses by moving the top node to the end, so every card's transform changes
+ * at once and the transition below is the whole animation. */
+
+.photo-pile {
+  margin-block-start: clamp(44px, 8vw, 80px);
+  display: grid;
+  justify-items: center;
+}
+
+/* One shape for every card, whatever the photo's own proportions — a pile of
+ * prints is a pile of prints. 3:4 rather than the phone's own 9:16, which would
+ * be a very tall column on a desktop; each photo's `focus` decides what the
+ * crop keeps. */
+.photo-stack {
+  position: relative;
+  width: clamp(250px, 68vw, 330px);
+  aspect-ratio: 3 / 4;
+  /* Room for the cards fanned out behind the top one. */
+  margin-block-end: 22px;
+  touch-action: pan-y; /* a horizontal drag is ours; a vertical one scrolls */
+}
+
+.photo-card {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  transform-origin: 50% 90%;
+  transition:
+    transform var(--dur-med) var(--ease-out-expo),
+    opacity var(--dur-med) var(--ease-out-expo),
+    filter var(--dur-med) var(--ease-out-expo);
+  will-change: transform;
+}
+
+.photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* The three depths. Deliberately asymmetric angles — a neat fan reads as a
+ * carousel, a crooked one reads as a pile someone put down. */
+.photo-card:nth-child(1) {
+  z-index: 3;
+  transform: rotate(-1.5deg);
+  cursor: grab;
+}
+
+.photo-card:nth-child(2) {
+  z-index: 2;
+  transform: translate(14px, 12px) rotate(4deg) scale(0.97);
+  filter: brightness(0.86);
+}
+
+.photo-card:nth-child(3) {
+  z-index: 1;
+  transform: translate(-12px, 22px) rotate(-5.5deg) scale(0.94);
+  filter: brightness(0.74);
+}
+
+/* A fourth and beyond: parked under the third, out of sight but still there. */
+.photo-card:nth-child(n + 4) {
+  z-index: 0;
+  transform: translateY(28px) scale(0.92);
+  filter: brightness(0.66);
+  opacity: 0;
+}
+
+.photo-card.is-dragging {
+  transition: none;      /* the pointer is driving it, not the easing */
+  cursor: grabbing;
+  box-shadow: var(--shadow-lg);
+}
+
+/* --fly is +1 or -1, set by Photos: the direction it was pushed. */
+.photo-card.is-leaving {
+  transform: translateX(calc(var(--fly, -1) * 135%)) rotate(calc(var(--fly, -1) * 16deg));
+  opacity: 0;
+  transition:
+    transform 340ms var(--ease-in-out),
+    opacity 340ms var(--ease-in-out);
+}
+
+/* One frame with no transition, so a card that has just been moved to the back
+ * appears there instead of flying back across the pile. */
+.photo-card.is-instant { transition: none; }
+
+.photo-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.photo-next {
+  display: grid;
+  place-items: center;
+  width: 42px; height: 42px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--sheen);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
+}
+
+.photo-next:hover {
+  background: var(--sheen-strong);
+  transform: translateX(-3px); /* RTL: "onward" is leftward */
+}
+
+.photo-next svg { width: 18px; height: 18px; }
+
+.photo-hint {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* No transitions to run, so the pile cuts from one arrangement to the next.
+ * Dragging is not attached at all in that mode — the button is the way. */
+@media (prefers-reduced-motion: reduce) {
+  .photo-card,
+  .photo-card.is-leaving { transition: none; }
+  .photo-card:nth-child(1) { cursor: default; }
+}
+
 /* ---- Timeline ---- */
 
 .timeline {
@@ -421,6 +585,11 @@
   transition: transform var(--dur-slow) var(--ease-out-expo);
 }
 
+.project-thumb img.is-contain {
+  object-fit: contain;
+  padding: 14px;
+}
+
 .project-card:hover .project-thumb img { transform: scale(1.06); }
 
 .project-thumb-placeholder {
@@ -482,6 +651,19 @@
 /* RTL: the "read more" arrow points right-to-left. */
 .project-card:hover .project-more svg { transform: translateX(-4px); }
 
+/* The line after a break in a title is a subtitle, not a second headline —
+ * sized off the heading it sits in (em, not rem) so it stays in proportion on
+ * the card's h3 and the detail page's h2 alike. */
+.title-sub {
+  display: block;
+  margin-block-start: 5px;
+  font-size: 0.56em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
 /* ---- Project detail ---- */
 
 .project-detail .back-link {
@@ -512,6 +694,13 @@
   background: var(--gradient-primary);
 }
 
+/* A logo or any artwork with its own edges: show all of it and give it room,
+ * rather than cropping into the middle of the picture. */
+.project-hero-img.is-contain {
+  object-fit: contain;
+  padding: clamp(14px, 3vw, 30px);
+}
+
 .project-detail-body {
   max-width: 68ch;
   display: grid;
@@ -525,6 +714,216 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-block-start: 30px;
+}
+
+/* ---- Plans: free vs licensed ---- */
+
+.plans { margin-block-start: 38px; }
+
+.plans-title {
+  font-size: var(--fs-h3);
+  margin-block-end: 8px;
+}
+
+.plans-intro {
+  max-width: 68ch;
+  color: var(--text-secondary);
+  margin-block-end: 20px;
+}
+
+/* Two equal columns; one per column on a narrow screen. The paid card must not
+ * grow taller-looking than the free one just because it has fewer rows, so both
+ * stretch to the row height. */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden; /* keeps the ::before ribbon inside the rounded corner */
+}
+
+/* A coloured rule along the card's top edge — the fastest read of "these two
+ * are different things" before a word is parsed. */
+.plan-card::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 3px;
+  background: var(--border-strong);
+}
+
+/* The paid column carries the accent, so the eye lands on what a licence buys
+ * without the free column reading as the lesser offer. */
+.plan-card.is-featured {
+  border-color: var(--border-strong);
+  background: var(--sheen-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.plan-card.is-featured::before { background: var(--gradient-warm); }
+
+.plan-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 4px 12px;
+  padding-block-end: 14px;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+/* Sits on its own tinted tile so the emoji reads as part of the design rather
+ * than as a character that wandered into the heading. */
+.plan-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  width: 46px; height: 46px;
+  border-radius: var(--radius-md);
+  background: var(--sheen-strong);
+  border: 1px solid var(--border-subtle);
+}
+
+.plan-card.is-featured .plan-emoji {
+  background: var(--sheen-strong);
+  border-color: var(--border-strong);
+}
+
+.plan-titles { min-width: 0; }
+
+.plan-head h4 {
+  font-size: var(--fs-body);
+  margin: 0;
+}
+
+.plan-tagline {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.plan-card.is-featured .plan-tagline {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.plan-badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--sheen-strong);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.plan-card.is-featured .plan-badge {
+  background: var(--gradient-warm);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+
+/* The price sits between the header and the list, on its own line, so the two
+ * cards can be compared on the number alone before a feature is read. */
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: -2px 0 0;
+}
+
+.plan-price-num {
+  font-size: clamp(1.7rem, 3.4vw, 2.1rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.plan-card.is-featured .plan-price-num {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.plan-price-unit {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 11px;
+}
+
+.plan-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+}
+
+/* The tick sits on the first line of a wrapped item, not centred against the
+ * whole block. Fixed width so every item's text starts on the same line,
+ * whatever the emoji's own advance width turns out to be. */
+.plan-bullet {
+  flex: none;
+  width: 1.35em;
+  font-size: 1rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.plans-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 68ch;
+  margin-block-start: 18px;
+  padding: 12px 15px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--sheen);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+/* ---- Download ---- */
+
+.project-download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-block-start: 30px;
+}
+
+.project-download .btn svg { width: 18px; height: 18px; }
+
+.download-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Its own line under the button, whatever the row wrapped like. */
+.download-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
 }
 
 /* ---- Empty state ---- */
@@ -564,6 +963,11 @@
   text-align: center;
   align-items: center;
   padding-block: 30px;
+  /* Cards keep the grid's default stretch, so every card in a row is the same
+     height. `.s-note` below takes `flex: 1` and swallows the difference, which
+     lines the buttons, QRs and captions up across cards no matter how long each
+     note runs. This only reads well while the cards hold comparable content —
+     one card with a QR next to one without leaves a visible void instead. */
   /* --accent comes from content.js per platform. */
   border-color: color-mix(in srgb, var(--accent, var(--accent-primary)) 26%, transparent);
 }
@@ -588,19 +992,37 @@
 
 .support-icon svg { width: 27px; height: 27px; }
 
+/* Official app-icon artwork brings its own brand colour and its own rounded
+   corners (transparent outside them), so the tinted plate and border would only
+   show as a halo behind it — drop both and let the artwork be the tile. */
+.support-icon.is-logo {
+  background: none;
+  border: none;
+}
+
+.support-icon.is-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .support-card h3 { font-size: 1.3rem; }
 
 .support-card .s-note {
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   line-height: 1.6;
+  /* Absorbs the height difference between cards, so everything below the note
+     stays aligned across the row. See the note on .support-card. */
   flex: 1;
 }
 
 .support-card .btn { width: 100%; }
 
-/* Bit/PayBox are app-only deep links with no web fallback, so we surface the
-   number itself with a copy button rather than a link that goes nowhere. */
+/* For a `kind: 'handle'` option — something with no working web link at all, so
+   we surface the number itself with a copy button rather than a dead link. No
+   option uses it right now; Bit and PayBox both moved to real links + a QR. */
 .handle-box {
   display: flex;
   align-items: center;
@@ -623,6 +1045,41 @@
 }
 
 .handle-box svg { width: 17px; height: 17px; opacity: 0.7; }
+
+/* The QR art is pure black-on-white, so it needs its own light plate to stay
+   scannable on the dark theme — tinting or inverting it breaks phone cameras. */
+.qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+}
+
+/* Every QR under assets/img is generated on the same grid: 41 modules (a
+   version-4 code's 33, plus a 4-module quiet zone each side) at 24px, i.e. a
+   984px square. 164px here is those 41 modules at 4px, so the downscale is an
+   exact 1:6 — and 2x/3x screens land on 1:3 and 1:2. Whole pixels per module is
+   what keeps the code readable by a phone; an off-grid size smears the modules
+   and scanners fail. Add a new QR at 984px/41 modules, and leave
+   image-rendering at its default (smooth) — `pixelated` drops module rows when
+   the browser scales down. */
+.qr-box img {
+  width: 164px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, var(--accent-primary)) 32%, transparent);
+}
+
+.qr-box figcaption {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
 
 .support-note {
   text-align: center;
@@ -699,6 +1156,31 @@
 
 .direct-row a { transition: color var(--dur-fast); }
 .direct-row a:hover { color: var(--accent-primary); }
+
+/* ---- Closing picture ---- */
+
+/* Sits under the form and the aside, capped narrower than the container so it
+ * reads as a sign-off rather than a banner. */
+.contact-figure {
+  margin: clamp(34px, 6vw, 56px) auto 0;
+  max-width: 720px;
+  text-align: center;
+}
+
+.contact-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+}
+
+.contact-figure figcaption {
+  margin-block-start: 12px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
 
 /* Buttons standing in for links, where putting the target in an href would leak
    it into the markup (the WhatsApp number). They must read as links, not chrome. */

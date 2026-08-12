@@ -45,6 +45,19 @@ const Render = (() => {
 
   const rich = (s) => nl2br(links(esc(s)));
 
+  /* A title may carry a deliberate break — 'Spill It Out\nלמדריכות הורים'. What
+   * follows it is a subtitle rather than a second headline, so it gets its own
+   * line and its own size instead of the heading's. In an attribute or the
+   * browser's tab title a newline has nowhere to go, so it collapses to a space
+   * instead of silently disappearing. */
+  const titleHtml = (s) => {
+    const [head, ...rest] = String(s ?? '').split(/[\r\n]+/);
+    const sub = rest.join(' ').trim();
+    return esc(head) + (sub ? `<span class="title-sub">${esc(sub)}</span>` : '');
+  };
+
+  const oneLine = (s) => String(s ?? '').replace(/\s*[\r\n]+\s*/g, ' ');
+
   const paras = (arr) => (arr || []).map((p) => `<p>${rich(p)}</p>`).join('');
 
   const ICONS = {
@@ -55,11 +68,15 @@ const Render = (() => {
     phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
     arrow: '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
     copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
     coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
     paypal: '<path d="M7 21h3l1-5h3a5 5 0 0 0 0-10H8L5 21z"/><path d="M11 16h3a5 5 0 0 0 5-5"/>',
     bit: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 10h4a2 2 0 0 1 0 4H9h4a2 2 0 0 1 0 4H9"/>',
     paybox: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
-    whatsapp: '<path d="M20.5 3.5A11 11 0 0 0 3.2 17L2 22l5.2-1.2A11 11 0 1 0 20.5 3.5z"/><path d="M8.5 8.5c0 4 3 7 7 7"/>',
+    // The real WhatsApp mark, which is a solid glyph rather than a line drawing
+    // like the rest of this set — hence the fill/stroke override on the path:
+    // it beats the stroked bubble-and-squiggle that used to stand in for it.
+    whatsapp: '<path fill="currentColor" stroke="none" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>',
     linkedin: '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>',
     github: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-1-2.6c3.1-.3 6.4-1.5 6.4-7A5.4 5.4 0 0 0 20 4.8 5 5 0 0 0 19.9 1S18.7.6 16 2.5a13.4 13.4 0 0 0-7 0C6.3.6 5.1 1 5.1 1A5 5 0 0 0 5 4.8a5.4 5.4 0 0 0-1.4 3.8c0 5.4 3.3 6.6 6.4 7A3.4 3.4 0 0 0 9 18.1V22"/>',
     instagram: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/>',
@@ -128,6 +145,31 @@ const Render = (() => {
 
   /* ---------- view: about ---------- */
 
+  /* A pile of prints, top one first. Depth is DOM order and nothing else — the
+   * CSS positions each card by :nth-child, so browsing is Photos.js moving one
+   * node to the end of the list and letting the transition play. No index to
+   * keep in sync, and it survives a re-render of the view. */
+  function photoStack(a) {
+    const list = (a.photos || []).filter((p) => has(p.src));
+    if (!list.length) return '';
+    return `
+      <section class="photo-pile reveal">
+        <div class="photo-stack" id="photo-stack" data-count="${list.length}">
+          ${list.map((p, i) => `
+            <figure class="photo-card">
+              <img src="${esc(p.src)}" alt="${esc(oneLine(p.alt || ''))}"
+                   draggable="false" decoding="async"
+                   ${p.focus ? `style="object-position:${esc(p.focus)}"` : ''}
+                   ${i === 0 ? '' : 'loading="lazy"'}>
+            </figure>`).join('')}
+        </div>
+        <div class="photo-controls">
+          <button class="photo-next" type="button" aria-label="התמונה הבאה">${icon('arrow')}</button>
+          ${a.photosHint ? `<span class="photo-hint">${rich(a.photosHint)}</span>` : ''}
+        </div>
+      </section>`;
+  }
+
   function about() {
     const m = C.meta;
     const a = C.about;
@@ -155,10 +197,10 @@ const Render = (() => {
       <div class="container">
         <div class="hero">
           <div class="hero-copy reveal">
-            <p class="hero-greeting">${esc(a.greeting)}</p>
+            <p class="hero-greeting">${rich(a.greeting)}</p>
             <h1><span class="gradient-text">${esc(m.name)}</span></h1>
             ${rotator}
-            <p class="hero-tagline">${esc(m.tagline)}</p>
+            <p class="hero-tagline">${rich(m.tagline)}</p>
             <div class="hero-actions">
               <a class="btn btn-primary magnetic" href="#contact">
                 ${icon('mail')}<span>דברו איתי!</span>
@@ -182,7 +224,9 @@ const Render = (() => {
               <article class="card highlight-card tilt reveal">
                 <span class="h-icon">${esc(h.icon)}</span>
                 <h3>${esc(h.title)}</h3>
-                <p>${esc(h.text)}</p>
+                ${h.items?.length
+                  ? `<ul class="h-list">${h.items.map((it) => `<li>${rich(it)}</li>`).join('')}</ul>`
+                  : `<p>${rich(h.text)}</p>`}
               </article>`).join('')}
           </div>` : ''}
 
@@ -192,9 +236,11 @@ const Render = (() => {
               <div class="timeline-item reveal">
                 <span class="timeline-year">${esc(t.year)}</span>
                 <h3>${esc(t.title)}</h3>
-                <p>${esc(t.text)}</p>
+                <p>${rich(t.text)}</p>
               </div>`).join('')}
           </div>` : ''}
+
+        ${photoStack(a)}
       </div>`;
 
     const view = document.getElementById('view-about');
@@ -213,15 +259,16 @@ const Render = (() => {
       <div class="project-grid">
         ${list.map((p) => `
           <article class="card project-card tilt reveal" data-project="${esc(p.id)}"
-                   role="link" tabindex="0" aria-label="${esc(p.title)}">
-            <div class="project-thumb">
+                   role="link" tabindex="0" aria-label="${esc(oneLine(p.title))}">
+            <div class="project-thumb"${p.imageBg ? ` style="background:${esc(p.imageBg)}"` : ''}>
               ${has(p.image)
-                ? `<img src="${esc(p.image)}" alt="" loading="lazy" decoding="async" width="400" height="250">`
+                ? `<img class="${p.imageFit === 'contain' ? 'is-contain' : ''}" src="${esc(p.image)}"
+                     alt="" loading="lazy" decoding="async" width="400" height="250">`
                 : `<div class="project-thumb-placeholder">✦</div>`}
             </div>
             <div class="project-body">
-              <h3>${esc(p.title)}</h3>
-              <p>${esc(p.blurb)}</p>
+              <h3>${titleHtml(p.title)}</h3>
+              <p>${rich(p.blurb)}</p>
               ${p.tags?.length ? `<div class="tag-row">${p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
               <span class="project-more">לפרטים ${icon('arrow')}</span>
             </div>
@@ -232,14 +279,78 @@ const Render = (() => {
       <div class="container" id="projects-index">
         <div class="section-head reveal">
           <span class="eyebrow">הפרויקטים שלי</span>
-          <h2>דברים שבניתי</h2>
-          <p>כל אחד מהם התחיל מבעיה אמיתית. לחיצה על כרטיס פותחת את הסיפור המלא.</p>
+          <h2>יישומונים חופשיים לשימוש</h2>
+          <p>מוזמנים להשתמש ביישומונים (אפליקציות) בכיף ובחופשיות</p>
+          <p>מסלולי הבסיס בהם נדיבים ביותר (פלוס פלוס!) ונותנים המון ערך בלי לשים שקל</p>
         </div>
         ${cards}
       </div>
       <div class="container project-detail" id="project-detail" hidden></div>`;
 
     stagger([...view.querySelectorAll('.project-grid .reveal')]);
+  }
+
+  /* The install file, or an honest placeholder for it. A button that is plainly
+   * "not yet" beats a link that downloads a 404 page, so with no `file` the
+   * same block renders disabled — the visitor still learns the app exists and
+   * what it needs to run. */
+  function downloadBlock(d) {
+    if (!d) return '';
+    const ready = has(d.file);
+    return `
+      <div class="project-download">
+        ${ready
+          ? `<a class="btn btn-primary magnetic" href="${esc(d.file)}" download>
+               ${icon('download')}<span>${esc(d.label)}</span></a>`
+          : `<button class="btn btn-primary" type="button" disabled aria-disabled="true">
+               ${icon('download')}<span>${esc(d.soonLabel || d.label)}</span></button>`}
+        ${d.meta ? `<span class="download-meta">${esc(d.meta)}</span>` : ''}
+        ${!ready && d.note ? `<p class="download-note">${rich(d.note)}</p>` : ''}
+      </div>`;
+  }
+
+  /* The free/paid comparison. Two columns rather than a ✓/✗ matrix, because the
+   * source in the app's terms is two lists — inventing a row per feature would
+   * mean inventing the "no" side of it.
+   *
+   * The ticks and stars are emoji from content.js rather than glyphs from ICONS:
+   * they carry their own colour, so the two columns are told apart at a glance
+   * instead of by a tint difference. They are decoration, so each is
+   * aria-hidden and the list still reads as plain items to a screen reader. */
+  function plansBlock(pl) {
+    if (!pl?.columns?.length) return '';
+    const bullet = (c) => (c.bullet
+      ? `<span class="plan-bullet" aria-hidden="true">${esc(c.bullet)}</span>`
+      : '');
+    return `
+      <section class="plans">
+        ${pl.title ? `<h3 class="plans-title">${esc(pl.title)}</h3>` : ''}
+        ${pl.intro ? `<p class="plans-intro">${rich(pl.intro)}</p>` : ''}
+        <div class="plan-grid">
+          ${pl.columns.map((c) => `
+            <article class="card plan-card${c.featured ? ' is-featured' : ''}">
+              <header class="plan-head">
+                ${c.emoji ? `<span class="plan-emoji" aria-hidden="true">${esc(c.emoji)}</span>` : ''}
+                <div class="plan-titles">
+                  <h4>${esc(c.label)}</h4>
+                  ${c.tagline ? `<p class="plan-tagline">${rich(c.tagline)}</p>` : ''}
+                </div>
+                ${c.badge ? `<span class="plan-badge">${esc(c.badge)}</span>` : ''}
+              </header>
+              ${c.price ? `
+                <p class="plan-price">
+                  <span class="plan-price-num">${esc(c.price)}</span>
+                  ${c.priceUnit ? `<span class="plan-price-unit">${esc(c.priceUnit)}</span>` : ''}
+                </p>` : ''}
+              <ul class="plan-list">
+                ${(c.items || []).map((it) => `
+                  <li>${bullet(c)}<span>${rich(it)}</span></li>`).join('')}
+              </ul>
+            </article>`).join('')}
+        </div>
+        ${pl.note ? `<p class="plans-note">
+          ${pl.noteEmoji ? `<span aria-hidden="true">${esc(pl.noteEmoji)}</span> ` : ''}${rich(pl.note)}</p>` : ''}
+      </section>`;
   }
 
   // Renders one project's page into the detail pane. Returns false if unknown.
@@ -252,13 +363,17 @@ const Render = (() => {
     pane.innerHTML = `
       <a class="back-link" href="#projects">${icon('arrow')}<span>חזרה לכל הפרויקטים</span></a>
       ${has(p.image)
-        ? `<img class="project-hero-img" src="${esc(p.image)}" alt="${esc(p.title)}" decoding="async">`
+        ? `<img class="project-hero-img ${p.imageFit === 'contain' ? 'is-contain' : ''}"
+               src="${esc(p.image)}" alt="${esc(oneLine(p.title))}" decoding="async"
+               ${p.imageBg ? `style="background:${esc(p.imageBg)}"` : ''}>`
         : ''}
       <div class="section-head">
         ${p.tags?.length ? `<div class="tag-row" style="margin-block-end:12px">${p.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-        <h2>${esc(p.title)}</h2>
+        <h2>${titleHtml(p.title)}</h2>
       </div>
       <div class="project-detail-body">${paras(p.body?.length ? p.body : [p.blurb])}</div>
+      ${plansBlock(p.plans)}
+      ${downloadBlock(p.download)}
       ${p.links?.length ? `
         <div class="project-links">
           ${p.links.map((l) => `
@@ -282,24 +397,48 @@ const Render = (() => {
 
   function support() {
     const s = C.support;
+    // A QR on its own is enough to make an option usable, so it counts as
+    // configured even when there is no web link to go with it.
     const live = (s.options || []).filter((o) =>
-      o.kind === 'handle' ? has(o.handle) : has(o.url));
+      o.kind === 'handle' ? has(o.handle) : has(o.url) || has(o.qr));
     const pending = (s.options || []).length - live.length;
 
     const cards = live.length ? `
       <div class="support-grid">
         ${live.map((o) => `
           <article class="card support-card tilt reveal" style="--accent:${esc(o.accent)}">
-            <div class="support-icon" style="color:${esc(o.accent)}">${icon(o.icon)}</div>
+            ${/* The real app icon when we have one: it is already a coloured,
+                  rounded tile, so it replaces the tinted plate instead of
+                  sitting inside it. `icon` stays as the fallback glyph for any
+                  option without artwork. alt is empty on purpose — the platform
+                  name is the <h3> directly below, so a description here would
+                  just be read out twice. */''}
+            ${has(o.logo)
+              ? `<div class="support-icon is-logo">
+                   <img src="${esc(o.logo)}" alt="" width="52" height="52"
+                        loading="lazy" decoding="async">
+                 </div>`
+              : `<div class="support-icon" style="color:${esc(o.accent)}">${icon(o.icon)}</div>`}
             <h3>${esc(o.platform)}</h3>
-            <p class="s-note">${esc(o.note)}</p>
+            <p class="s-note">${rich(o.note)}</p>
             ${o.kind === 'handle'
               ? `<button class="handle-box" type="button" data-copy="${esc(o.handle)}"
                     aria-label="העתקת המספר ${esc(o.handle)}">
                    <span class="ltr">${esc(o.handle)}</span>${icon('copy')}
                  </button>`
-              : `<a class="btn btn-ghost" href="${esc(o.url)}" target="_blank"
-                    rel="noopener noreferrer">${esc(o.label)}</a>`}
+              : has(o.url)
+                ? `<a class="btn btn-ghost" href="${esc(o.url)}" target="_blank"
+                      rel="noopener noreferrer">${esc(o.label)}</a>`
+                : ''}
+            ${/* A QR next to the link: tapping works on a phone, but a visitor on
+                  a desktop has no app to open — they scan this with their phone
+                  instead. Purely additive, so any option can carry one. */''}
+            ${has(o.qr) ? `
+              <figure class="qr-box">
+                <img src="${esc(o.qr)}" alt="${esc(o.qrAlt || `קוד QR ל${o.platform}`)}"
+                     width="164" height="164" loading="lazy" decoding="async">
+                ${o.qrNote ? `<figcaption>${rich(o.qrNote)}</figcaption>` : ''}
+              </figure>` : ''}
           </article>`).join('')}
       </div>`
       : emptyState('אפשרויות התמיכה בהכנה', 'עוד לא הגדרתי את הקישורים. בינתיים, מילה טובה גם עושה את העבודה.');
@@ -307,13 +446,13 @@ const Render = (() => {
     document.getElementById('view-support').innerHTML = `
       <div class="container">
         <div class="section-head reveal">
-          <span class="eyebrow">תנו לשפינדל יד</span>
-          <h2>תמיכה בי! מה חשבתם? יש לי פיות להאכיל...</h2>
-          <p>${esc(s.intro)}</p>
+          <span class="eyebrow">תמיכה</span>
+          <h2>תמיכה בי! מה חשבתם?</h2>
+          <p>${rich(s.intro)}</p>
         </div>
         ${cards}
-        ${live.length ? `<p class="support-note reveal">${esc(s.note)}</p>` : ''}
-        ${pending && live.length ? `<p class="support-note">עוד אפשרויות בקרוב.</p>` : ''}
+        ${live.length ? `<p class="support-note reveal">${rich(s.note)}</p>` : ''}
+        ${pending && live.length ? `<p class="support-note">תודה לכם! אבא אוהב! ❤️</p>` : ''}
       </div>`;
 
     stagger([...document.querySelectorAll('#view-support .support-grid .reveal')]);
@@ -333,12 +472,7 @@ const Render = (() => {
       direct.push(`<div class="direct-row">${icon('mail')}
         <a href="mailto:${esc(m.email)}" class="ltr">${esc(m.email)}</a></div>`);
     }
-    // A button, not a link: an href would put the number straight back into the
-    // DOM. The delegated handler in contact.js builds the URL when it's clicked.
-    if (whatsapp()) {
-      direct.push(`<div class="direct-row">${icon('phone')}
-        <button type="button" class="link-btn" data-wa="plain">וואטסאפ</button></div>`);
-    }
+
     (m.socials || []).forEach((s) => {
       if (!has(s.url)) return;
       direct.push(`<div class="direct-row">${icon(s.icon)}
@@ -353,8 +487,8 @@ const Render = (() => {
       <div class="container">
         <div class="section-head reveal">
           <span class="eyebrow">צור קשר</span>
-          <h2>נשמח לשמוע ממך</h2>
-          <p>${esc(c.intro)}</p>
+          <h2>אשמח לשמוע ממך</h2>
+          <p>${rich(c.intro)}</p>
           ${c.responseNote ? `<span class="response-note"><i class="pulse-dot"></i>${esc(c.responseNote)}</span>` : ''}
         </div>
 
@@ -418,7 +552,7 @@ const Render = (() => {
             ${whatsapp() ? `
               <div class="card wa-card reveal">
                 <h3>${esc(c.whatsapp.title)}</h3>
-                <p>${esc(c.whatsapp.text)}</p>
+                <p>${rich(c.whatsapp.text)}</p>
                 <button class="btn btn-whatsapp magnetic" type="button" id="wa-btn" data-wa="form">
                   ${icon('whatsapp')}<span>${esc(c.whatsapp.cta)}</span>
                 </button>
@@ -426,6 +560,13 @@ const Render = (() => {
             ${direct.length ? `<div class="card direct-card reveal">${direct.join('')}</div>` : ''}
           </aside>`}
         </div>
+
+        ${has(c.image) ? `
+          <figure class="contact-figure reveal">
+            <img src="${esc(c.image)}" alt="${esc(oneLine(c.imageAlt || ''))}"
+                 loading="lazy" decoding="async" width="1280" height="853">
+            ${c.imageCaption ? `<figcaption>${rich(c.imageCaption)}</figcaption>` : ''}
+          </figure>` : ''}
       </div>`;
   }
 
@@ -433,7 +574,7 @@ const Render = (() => {
     return `<div class="empty-state reveal">
       <span class="emoji">🌱</span>
       <h3>${esc(title)}</h3>
-      <p>${esc(text)}</p>
+      <p>${rich(text)}</p>
     </div>`;
   }
 

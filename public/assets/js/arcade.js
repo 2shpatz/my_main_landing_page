@@ -222,21 +222,62 @@ const Arcade = (() => {
       ],
     },
 
-    // Moustachioed jumping man.
+    /* Moustachioed jumping man, recovered from assets/img/plumber.gif. That file
+     * is a sprite resampled at a non-integer scale, so the original grid was
+     * refitted (scale 3.96) and each cell resampled: the result is the GIF's own
+     * 15x21 art and its own 9 colours, not a redraw. The GIF holds just two
+     * poses, 120ms each, so it becomes two frames alternating at that rate.
+     * Frame 2 sits two rows higher — that lift is in the GIF, not a mistake. */
     plumber: {
-      w: 9, h: 11, pal: ['', '#e34b3a', '#f2c49b', '#3f6fd6', '#2d283e'],
-      rows: [
-        '001111100',
-        '011111110',
-        '042222240',
-        '022222220',
-        '024444420',
-        '002222200',
-        '113333311',
-        '113333311',
-        '033333330',
-        '033003300',
-        '044004400',
+      w: 15, h: 21,
+      pal: ['', '#000000', '#f8e1d8', '#885718', '#f58567', '#315a90', '#500101', '#b02960', '#f84170', '#7fd7c8'],
+      frames: [
+        [ // stride, feet down
+          '000000000000000',
+          '000000666660000',
+          '000066888486000',
+          '000688774426000',
+          '006787711111100',
+          '067771111111110',
+          '062111414140000',
+          '623214212123300',
+          '643211222222230',
+          '614212214444430',
+          '011442111111100',
+          '001334441111000',
+          '000673333500000',
+          '006778559950000',
+          '006333522925000',
+          '003222322925000',
+          '003223555995000',
+          '003223555550000',
+          '000333313100000',
+          '000133341410000',
+          '000111111110000',
+        ],
+        [ // stride, body lifted
+          '000000666660000',
+          '000066888486000',
+          '000688774426000',
+          '006787711111100',
+          '067771111111110',
+          '062111414140000',
+          '623214212123300',
+          '643211222222230',
+          '614212214444430',
+          '011442111111100',
+          '001344441111000',
+          '003733333500000',
+          '003778359950000',
+          '013222322925110',
+          '133223522921411',
+          '133223555951311',
+          '135335555513110',
+          '134105555013110',
+          '011000000001100',
+          '000000000000000',
+          '000000000000000',
+        ],
       ],
     },
 
@@ -586,6 +627,53 @@ const Arcade = (() => {
         ],
       ],
     },
+
+    /* The janitor. Nobody drives it and it has no face — it is a prop that
+     * walks, summoned by restoreAll() once the text has gone home, to clear the
+     * debris that has no home to go to. Two frames: the head wags left, then
+     * right, and the bristle tips change their gaps between them, so a pass
+     * reads as sweeping rather than sliding. */
+    broom: {
+      w: 11, h: 16, pal: ['', '#c9c9c9', '#8f8f8f'],
+      frames: [
+        [ // 0 — head planted, handle leaning back
+          '00000001100',
+          '00000011100',
+          '00000011000',
+          '00000110000',
+          '00000110000',
+          '00001100000',
+          '00001100000',
+          '00011000000',
+          '00011000000',
+          '00111100000',
+          '00222200000',   // the binding band
+          '01111110000',
+          '01111111000',
+          '11111111100',
+          '11111111110',
+          '11011011010',   // bristle tips
+        ],
+        [ // 1 — head swung forward, tips splayed the other way
+          '00000011000',
+          '00000111000',
+          '00000110000',
+          '00000110000',
+          '00001100000',
+          '00001100000',
+          '00001100000',
+          '00011000000',
+          '00011000000',
+          '00011110000',
+          '00022220000',
+          '00111111000',
+          '01111111100',
+          '01111111110',
+          '11111111110',
+          '01101101101',
+        ],
+      ],
+    },
   };
 
   // These patrol the bottom of the page permanently, so they're excluded from
@@ -595,7 +683,11 @@ const Arcade = (() => {
   // instead of walking the floor, so it gets its own keeper below. Both lists
   // are kept out of the pool the wanderers are drawn from.
   const ALWAYS_ON = [...GROUND_CREW, 'muncher', 'lemming'];
-  const NAMES = Object.keys(SPRITES).filter((n) => !ALWAYS_ON.includes(n));
+  // Summoned by name for one job and gone again — never a wanderer, never a
+  // hammer target, so it stays out of the pool spawn() draws from.
+  const SUMMONED = ['broom'];
+  const NAMES = Object.keys(SPRITES)
+    .filter((n) => !ALWAYS_ON.includes(n) && !SUMMONED.includes(n));
   const PX = 3; // one sprite pixel = 3 CSS px
 
   /* ---------- state ---------- */
@@ -622,6 +714,7 @@ const Arcade = (() => {
   let spawnTimer = 0;
   let pointer = { x: -1e4, y: -1e4 };
   let restoring = false;
+  let sweep = null; // the broom's one pass; see startSweep()
 
   const DENSITY = { calm: 2, normal: 4, busy: 6 };
   let maxCast = 4;
@@ -661,11 +754,14 @@ const Arcade = (() => {
     return built;
   }
 
-  /* Which frame to draw. The cat walks through frames 0-2, holds frame 1 (legs
-   * extended) while airborne, and cycles the two sitting poses when resting;
+  /* Which frame to draw. The plumber alternates its two walk frames and holds
+   * the second one while airborne; the cat walks through frames 0-2, holds
+   * frame 1 (legs extended) while airborne, and cycles two sitting poses;
    * the muncher chomps while it travels and plays its death frames once, on a
    * clock of its own; the ghosts and invaders flip between two frames. */
   const CAT_AIR_FRAME = 1;
+  const PLUMBER_WALK_FPS = 1 / 0.12;   // the GIF holds each pose for 120ms
+  const PLUMBER_AIR_FRAME = 1;   // legs apart reads as a jump
 
   // Shut, half, wide, half — a mouth that opens and closes, not one that snaps
   // back to shut from wide.
@@ -704,6 +800,10 @@ const Arcade = (() => {
     if (s.name === 'lemming') {
       if (s.floating) return LEM_WALK + (Math.floor(s.anim * LEM_FLOAT_FPS) % 2);
       return Math.floor(s.anim * LEM_WALK_FPS) % LEM_WALK;
+    }
+    if (s.name === 'plumber') {
+      if (s.vy !== 0) return PLUMBER_AIR_FRAME;
+      return Math.floor(s.anim * PLUMBER_WALK_FPS) % 2;
     }
     const flip = FLIP_FPS[s.name];
     if (flip) return Math.floor(s.anim * flip) % 2;
@@ -1238,10 +1338,16 @@ const Arcade = (() => {
   /* ---------- hammer: words -> pixels ---------- */
 
   const BREAKABLE = [
-    'h1', 'h2', 'h3', 'h4', 'p', 'label',
+    'h1', 'h2', 'h3', 'h4', 'p', 'label', 'li',
     '.tag', '.eyebrow', '.tab', '.timeline-year', '.gradient-text',
     '.brand-text', '.hero-greeting', '.s-note', '.project-more',
   ].join(',');
+
+  // Breaking the line about breaking rules throws the rules themselves out:
+  // spinning 90s WordArt חוק, one per hit. Matched on the text so the copy in
+  // content.js stays plain strings — reword it and this keeps working as long
+  // as "לשבור חוקים" survives.
+  const RULE_LINE = /לשבור\s+חוקים/;
 
   // Sample one glyph's ink so the word breaks along its real letterforms
   // instead of into rectangles. Cached per char+font+size.
@@ -1338,6 +1444,181 @@ const Arcade = (() => {
     if (!made.length) return false;
     smashed.set(el, made);
     el.classList.add('smashed');
+    if (RULE_LINE.test(el.textContent || '')) throwRules(el.getBoundingClientRect());
+    return true;
+  }
+
+  /* ---------- WordArt rules ----------
+   * Deliberately the ugliest thing on the site: rainbow gradient, fake extrude,
+   * fat outline. It is a joke about 1997, so it should look like 1997.
+   *
+   * Unlike the pixel debris these do NOT fall — they drift around the viewport
+   * and bounce off its edges, because they are targets: the whole point is to
+   * chase one down with the hammer and break the rule yourself. They live in
+   * viewport space (no scroll offset) so scrolling never carries them away. */
+
+  const wordArts = [];
+  const MAX_WORDARTS = 18;
+  const RULE_WORD = 'חוק';
+  const WORDART_FONT = "900 %spx 'Tel Aviv Eclectic', 'Heebo', sans-serif";
+  const WORDART_SKINS = [
+    ['#ffe9a8', '#ff9f43', '#c0392b'],
+    ['#a8f0ff', '#6aa9ff', '#5b2bd6'],
+    ['#ffd6f5', '#ff6ad5', '#7a1f8f'],
+    ['#e8ffc8', '#6ee36e', '#12703a'],
+  ];
+
+  const wordArtFont = (size) => WORDART_FONT.replace('%s', Math.round(size));
+
+  function throwRules(rect) {
+    const n = 5 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      if (wordArts.length >= MAX_WORDARTS) return;
+      const size = 26 + Math.random() * 30;
+      // Thrown outwards from the line, mostly upwards so they clear the card.
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+      const speed = 90 + Math.random() * 110;
+      fxCtx.font = wordArtFont(size);
+      wordArts.push({
+        x: rect.left + Math.random() * rect.width,
+        y: rect.top + rect.height / 2,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        rot: (Math.random() - 0.5) * 0.8,
+        vrot: (Math.random() - 0.5) * 2.4,
+        size,
+        w: fxCtx.measureText(RULE_WORD).width,
+        h: size * 0.95,
+        skin: WORDART_SKINS[Math.floor(Math.random() * WORDART_SKINS.length)],
+        alpha: 1,
+      });
+    }
+  }
+
+  function stepWordArts(dt) {
+    if (restoring) return;
+    for (const w of wordArts) {
+      w.x += w.vx * dt;
+      w.y += w.vy * dt;
+      w.rot += w.vrot * dt;
+
+      // Bounce off the viewport edges, using the rotated word's half-diagonal
+      // so a spinning one never clips through a wall.
+      const r = Math.hypot(w.w, w.h) / 2;
+      if (w.x < r) { w.x = r; w.vx = Math.abs(w.vx); w.vrot = -w.vrot; }
+      if (w.x > innerWidth - r) { w.x = innerWidth - r; w.vx = -Math.abs(w.vx); w.vrot = -w.vrot; }
+      if (w.y < r) { w.y = r; w.vy = Math.abs(w.vy); w.vrot = -w.vrot; }
+      if (w.y > innerHeight - r) { w.y = innerHeight - r; w.vy = -Math.abs(w.vy); w.vrot = -w.vrot; }
+    }
+  }
+
+  // Shared by the draw pass and the shatter raster, so the debris comes off
+  // exactly the artwork you were looking at.
+  function paintWordArt(ctx, size, skin) {
+    const [top, mid, deep] = skin;
+    ctx.font = wordArtFont(size);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Fake extrude: the same word stamped back along the diagonal.
+    const depth = Math.max(2, Math.round(size / 9));
+    ctx.fillStyle = deep;
+    for (let d = depth; d > 0; d--) ctx.fillText(RULE_WORD, d, d);
+
+    const g = ctx.createLinearGradient(0, -size / 2, 0, size / 2);
+    g.addColorStop(0, top);
+    g.addColorStop(0.55, mid);
+    g.addColorStop(1, deep);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2, size / 10);
+    ctx.strokeStyle = '#1b0a1b';
+    ctx.strokeText(RULE_WORD, 0, 0);
+    ctx.fillStyle = g;
+    ctx.fillText(RULE_WORD, 0, 0);
+  }
+
+  function drawWordArts() {
+    for (const w of wordArts) {
+      fxCtx.save();
+      fxCtx.globalAlpha = w.alpha;
+      fxCtx.translate(Math.round(w.x), Math.round(w.y));
+      fxCtx.rotate(w.rot);
+      paintWordArt(fxCtx, w.size, w.skin);
+      fxCtx.restore();
+    }
+    fxCtx.globalAlpha = 1;
+  }
+
+  /* ---------- breaking a rule ----------
+   * Rasterise the word as drawn, then scatter its own ink. These particles are
+   * transient: no element to un-hide, they just tween to nothing on restore. */
+
+  function hitTestWordArts(x, y) {
+    for (let i = wordArts.length - 1; i >= 0; i--) {
+      const w = wordArts[i];
+      // Into the word's own frame, then a plain box test with a little slack.
+      const dx = x - w.x;
+      const dy = y - w.y;
+      const c = Math.cos(-w.rot);
+      const s = Math.sin(-w.rot);
+      const lx = dx * c - dy * s;
+      const ly = dx * s + dy * c;
+      if (Math.abs(lx) <= w.w / 2 + 8 && Math.abs(ly) <= w.h / 2 + 8) return i;
+    }
+    return -1;
+  }
+
+  function breakWordArt(index) {
+    const w = wordArts[index];
+    wordArts.splice(index, 1);
+
+    const pad = Math.ceil(w.size / 3);
+    const cw = Math.ceil(w.w) + pad * 2;
+    const ch = Math.ceil(w.h) + pad * 2;
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = ch;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.translate(cw / 2, ch / 2);
+    paintWordArt(g, w.size, w.skin);
+
+    const size = Math.max(2, Math.round(w.size / 9));
+    const step = size + 1;
+    const cos = Math.cos(w.rot);
+    const sin = Math.sin(w.rot);
+    let data;
+    try {
+      data = g.getImageData(0, 0, cw, ch).data;
+    } catch {
+      data = null; // canvas tainted or unavailable — fall back to a spark burst
+    }
+
+    if (data) {
+      for (let y = 0; y < ch; y += step) {
+        for (let x = 0; x < cw; x += step) {
+          const i = (y * cw + x) * 4;
+          if (data[i + 3] < 128) continue;
+          if (particles.length >= MAX_PARTICLES) break;
+          // Local offset -> rotated -> viewport -> page, so every shard starts
+          // exactly where its pixel was on screen.
+          const ox = x - cw / 2;
+          const oy = y - ch / 2;
+          const px = w.x + ox * cos - oy * sin + scrollX;
+          const py = w.y + ox * sin + oy * cos + scrollY;
+          particles.push({
+            x: px, y: py, ox: px, oy: py,
+            vx: (ox / (cw / 2)) * 150 + (Math.random() - 0.5) * 120,
+            vy: -120 - Math.random() * 200,
+            size,
+            colour: `rgb(${data[i]},${data[i + 1]},${data[i + 2]})`,
+            el: null, transient: true, settled: false,
+            floor: scrollY + innerHeight - 4,
+          });
+        }
+      }
+    } else {
+      sparkle(w.x, w.y, w.skin[1]);
+    }
+    shock(w.x, w.y);
     return true;
   }
 
@@ -1479,12 +1760,109 @@ const Arcade = (() => {
     }
   }
 
-  // Putting the hammer away tweens every pixel home, then un-hides the text.
+  /* ---------- the broom ----------
+   * Only the text pixels have somewhere to be — they came out of a word and
+   * they go back into it. Sprite debris, WordArt shards and sparks never had a
+   * home, so tweening them "back" was a lie the eye could read: they'd fly to
+   * a spot and vanish. They stay on the floor instead, and this comes to clear
+   * them: one pass, right to left the way the page reads, pushing the litter
+   * along ahead of the bristles until it goes off the edge.
+   *
+   * The pass lives in page coordinates like the debris does, on the line where
+   * the debris actually settled — not on the current viewport floor, which the
+   * visitor may have scrolled somewhere else entirely. */
+
+  const SWEEP_SPEED = 300;   // px/s the broom walks — a brisk pass, not a stroll
+  const SWEEP_FPS = 7;       // the head's wag
+  const SWEEP_REACH = 46;    // how far above the line the bristles still catch
+
+  const isLitter = (p) => p.transient;
+
+  function startSweep() {
+    if (sweep) return;                       // one janitor is enough
+    const litter = particles.filter(isLitter);
+    if (!litter.length) return;
+
+    // The line the pile is on. Median rather than mean: one spark that settled
+    // on a different screenful shouldn't drag the whole pass off the floor.
+    const floors = litter.map((p) => p.floor).sort((a, b) => a - b);
+    const line = floors[Math.floor(floors.length / 2)];
+    const sp = buildSprite('broom');
+
+    sweep = {
+      line,
+      x: scrollX + innerWidth + sp.w,        // just off the right edge
+      end: scrollX - sp.w * 2,               // gone past the left one
+      t: 0,
+    };
+    kick();
+  }
+
+  function stepSweep(dt) {
+    if (!sweep) return;
+    const sp = buildSprite('broom');
+    sweep.t += dt;
+    sweep.x -= SWEEP_SPEED * dt;
+
+    // Anything standing in front of the bristles gets knocked along. It is
+    // thrown a little faster than the broom walks, so it stays ahead and
+    // tumbles instead of being dragged in a neat line.
+    const head = sweep.x + sp.w * 0.75;
+    for (const p of particles) {
+      if (!isLitter(p)) continue;
+      if (p.x > head || p.x < sweep.x - sp.w) continue;
+      if (p.y > sweep.line + 8 || p.y < sweep.line - SWEEP_REACH) continue;
+      p.settled = false;
+      p.vx = -SWEEP_SPEED * 1.3 - Math.random() * 60;
+      p.vy = -40 - Math.random() * 90;
+    }
+
+    // Off the left edge of the page is off the page: drop it.
+    for (let i = particles.length - 1; i >= 0; i--) {
+      if (isLitter(particles[i]) && particles[i].x < scrollX - 60) particles.splice(i, 1);
+    }
+
+    if (sweep.x <= sweep.end) {
+      // Whatever never made it under the bristles — litter on some other
+      // screenful — goes with the broom rather than outliving it.
+      for (let i = particles.length - 1; i >= 0; i--) {
+        if (isLitter(particles[i])) particles.splice(i, 1);
+      }
+      sweep = null;
+    }
+  }
+
+  function drawSweep() {
+    if (!sweep) return;
+    const frame = Math.floor(sweep.t * SWEEP_FPS) % 2;
+    const sp = buildSprite('broom', frame);
+    // Half a pixel of bob per step, so it walks rather than glides.
+    const bob = Math.round(Math.sin(sweep.t * 14) * 1.5);
+    fxCtx.drawImage(
+      sp.canvas,
+      Math.round(sweep.x - scrollX),
+      Math.round(sweep.line - sp.h - scrollY + bob),
+      sp.w, sp.h,
+    );
+  }
+
+  // Putting the hammer away tweens the text's own pixels home and un-hides it.
+  // The WordArt has no home to go back to, so it fades out over the same beat,
+  // and the debris on the floor is left for the broom.
   function restoreAll() {
-    if (!particles.length) { smashed.clear(); return; }
+    if (!particles.length) { smashed.clear(); wordArts.length = 0; return; }
+    const homing = particles.filter((p) => !isLitter(p));
+    if (!homing.length) {
+      // Nothing was smashed but scenery: skip the tween, fetch the broom.
+      smashed.clear();
+      wordArts.length = 0;
+      startSweep();
+      return;
+    }
+
     restoring = true;
     const start = performance.now();
-    const from = particles.map((p) => ({ p, x: p.x, y: p.y }));
+    const from = homing.map((p) => ({ p, x: p.x, y: p.y }));
     const DUR = 600;
 
     const tick = (now) => {
@@ -1494,13 +1872,20 @@ const Arcade = (() => {
         f.p.x = f.x + (f.p.ox - f.x) * e;
         f.p.y = f.y + (f.p.oy - f.y) * e;
       }
+      for (const w of wordArts) w.alpha = 1 - e;
       if (t < 1) {
         requestAnimationFrame(tick);
       } else {
         for (const el of smashed.keys()) el.classList.remove('smashed');
         smashed.clear();
-        particles.length = 0;
+        // The text is back in the page, so its pixels go; the litter stays put
+        // on the floor and waits to be swept.
+        for (let i = particles.length - 1; i >= 0; i--) {
+          if (!isLitter(particles[i])) particles.splice(i, 1);
+        }
+        wordArts.length = 0;
         restoring = false;
+        startSweep();
       }
     };
     requestAnimationFrame(tick);
@@ -1555,7 +1940,11 @@ const Arcade = (() => {
     hammerBtn.addEventListener('click', () => {
       hammerOn = !hammerOn;
       syncHammer();
-      if (!hammerOn) restoreAll();
+      // Picking the hammer back up sends the janitor away mid-pass — it is here
+      // to clean up after you, not to sweep under an active hammer. Whatever it
+      // hadn't reached stays on the floor until the next time you put it down.
+      if (hammerOn) sweep = null;
+      else restoreAll();
       kick();
     });
 
@@ -1568,7 +1957,8 @@ const Arcade = (() => {
   /* ---------- loop ---------- */
 
   function busy() {
-    return arcadeOn || particles.length > 0 || shocks.length > 0 || restoring;
+    return arcadeOn || particles.length > 0 || wordArts.length > 0 ||
+           shocks.length > 0 || restoring || sweep != null;
   }
 
   function frame(now) {
@@ -1590,12 +1980,16 @@ const Arcade = (() => {
       stepCast(dt);
     }
     stepParticles(dt);
+    stepSweep(dt);
+    stepWordArts(dt);
     stepShocks(dt);
 
     bgCtx.clearRect(0, 0, innerWidth, innerHeight);
     fxCtx.clearRect(0, 0, innerWidth, innerHeight);
     if (arcadeOn) drawCast();
     if (particles.length) drawParticles();
+    if (sweep) drawSweep();
+    if (wordArts.length) drawWordArts();
     if (shocks.length) drawShocks();
 
     rafId = busy() ? requestAnimationFrame(frame) : null;
@@ -1675,7 +2069,17 @@ const Arcade = (() => {
       if (!hammerOn) return;
       if (e.target.closest('.arcade-ctl')) return;
 
-      // Characters are tested first: they're small and drawn behind the page,
+      // Floating rules are drawn above everything, so they get first refusal.
+      const rule = hitTestWordArts(e.clientX, e.clientY);
+      if (rule !== -1) {
+        e.preventDefault();
+        e.stopPropagation();
+        breakWordArt(rule);
+        kick();
+        return;
+      }
+
+      // Characters are tested next: they're small and drawn behind the page,
       // so if one is under the cursor that's plainly what you were aiming at.
       const hit = hitTestCast(e.clientX, e.clientY);
       if (hit !== -1) {
@@ -1731,7 +2135,8 @@ const Arcade = (() => {
     init, onRouteChange, reduced,
     // exposed for tests
     _state: () => ({
-      cast: cast.length, particles: particles.length,
+      cast: cast.length, particles: particles.length, wordArts: wordArts.length,
+      litter: particles.filter(isLitter).length, sweeping: sweep != null,
       smashed: smashed.size, arcadeOn, hammerOn, running: rafId != null,
     }),
     _boxes: () => cast.map((s) => ({ name: s.name, x: s.x, y: s.y, w: s.w, h: s.h })),

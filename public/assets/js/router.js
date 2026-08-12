@@ -94,7 +94,9 @@
     const name = SITE_CONTENT.meta.name;
     if (route === 'projects' && param) {
       const p = SITE_CONTENT.projects.find((x) => x.id === param);
-      if (p) return `${p.title} · ${name}`;
+      // A title's line break is for the page's heading; the browser tab gets it
+      // on one line.
+      if (p) return `${p.title.replace(/\s*[\r\n]+\s*/g, ' ')} · ${name}`;
     }
     const item = SITE_CONTENT.nav.find((n) => n.id === route);
     return item && route !== DEFAULT_ROUTE ? `${item.label} · ${name}` : name;
@@ -181,6 +183,7 @@
     Render.all();
     Motion.init();
     Contact.init();
+    Photos.init();
     Arcade.init();
     initClicks();
     initKeyboard();
