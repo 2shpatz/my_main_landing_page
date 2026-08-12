@@ -400,7 +400,7 @@ const SITE_CONTENT = {
   ],
 
   footer: {
-    text: '"גדול יותר זה לא תמיד טוב יותר, אבל זה תמיד גדול יותר."\nפומבה [שם,שם]',
+    text: '"גדול יותר זה לא תמיד טוב יותר,\nאבל זה תמיד גדול יותר."\nפומבה [שם,שם]',
   },
 
   /* ---------- The retro arcade layer ----------
@@ -424,5 +424,11 @@ const SITE_CONTENT = {
       hammer: 'פטיש',
       hammerOn: 'הפטיש פעיל — לחצו כדי להחזיר הכול',
     },
+
+    // A speech bubble beside the hammer button, shown each time the hammer is
+    // picked up. It goes away when the hammer is put down, after a few seconds,
+    // or when clicked — and a click means "don't show me this again". Set to
+    // null for no bubble at all.
+    hammerBubble: 'כשאתם מסיימים עם הפטיש תחזירו אותו למקום!\nאין לי כח לאסוף אחריכם כל היום',
   },
 };

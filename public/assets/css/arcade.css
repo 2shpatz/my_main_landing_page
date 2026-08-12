@@ -125,6 +125,99 @@
 /* Dim the button when the cast is switched off, so the state reads at a glance. */
 #arcade-toggle[aria-pressed="false"] { opacity: 0.72; }
 
+/* ---------- the hammer's bubble ----------
+ * Hangs off the control cluster, so it follows the buttons wherever they sit:
+ * under them at the top of a phone, above them at the foot of a desktop. Sized
+ * off the viewport as well as a max, since the cluster is only ever a short
+ * distance from an edge. */
+
+.arcade-bubble {
+  position: absolute;
+  z-index: 1;
+  width: max-content;
+  max-width: min(260px, 62vw);
+  padding-block: 11px;
+  /* Logical, not physical: the × sits at the inline end, which is the left in
+     this RTL page, and needs the wider side. */
+  padding-inline: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  text-align: start;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.94);
+  transition:
+    opacity var(--dur-med) var(--ease-out-expo),
+    transform var(--dur-med) var(--ease-spring),
+    border-color var(--dur-fast);
+}
+
+.arcade-bubble.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+.arcade-bubble:hover { border-color: var(--accent-primary); }
+
+/* Phone: the cluster is at the top, so the bubble hangs below it and its tail
+ * points up. `inset-inline-end: 0` lines it up with the cluster's outer edge
+ * and lets it grow inward, away from the screen edge. */
+.arcade-bubble {
+  inset-block-start: calc(100% - 8px);
+  inset-inline-end: 0;
+}
+
+.arcade-bubble::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -7px;
+  inset-inline-end: 16px;
+  width: 12px; height: 12px;
+  background: var(--bg-glass);
+  border-inline-start: 1px solid var(--border-strong);
+  border-block-start: 1px solid var(--border-strong);
+  transform: rotate(45deg);
+}
+
+/* Desktop: the cluster sits at the bottom, so the bubble stacks above it and
+ * the tail flips to its underside. */
+@media (min-width: 861px) {
+  .arcade-bubble {
+    inset-block-start: auto;
+    inset-block-end: calc(100% + 12px);
+    inset-inline-end: auto;
+    inset-inline-start: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+
+  .arcade-bubble.is-in { transform: none; }
+
+  .arcade-bubble::before {
+    inset-block-start: auto;
+    inset-block-end: -7px;
+    inset-inline-end: auto;
+    inset-inline-start: 20px;
+    border-inline-start: none;
+    border-block-start: none;
+    border-inline-end: 1px solid var(--border-strong);
+    border-block-end: 1px solid var(--border-strong);
+  }
+}
+
+/* `.bubble-x` itself is shared with the portrait bubble (views.css). */
+.arcade-bubble:hover .bubble-x { color: var(--accent-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-bubble { transition: opacity var(--dur-fast); transform: none; }
+  .arcade-bubble.is-in { transform: none; }
+}
+
 /* ---------- hammer ---------- */
 
 /* Hammer cursor: shaded steel head, wooden handle with a grain line and a

@@ -124,11 +124,14 @@
   to { opacity: 0; transform: translateY(-0.9em); }
 }
 
+/* Set well clear of the copy above: the two buttons are the one thing on this
+ * screen to act on, and a gap the size of the text's own leading makes them
+ * read as part of the paragraph rather than as the way out of it. */
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-block-start: 28px;
+  margin-block-start: clamp(34px, 4.5vw, 50px);
 }
 
 /* ---- Portrait ---- */
@@ -375,7 +378,7 @@
   .hero-role { margin-block-end: 6px; }
   /* A paragraph running straight into the buttons under it reads as one block
      and is easy to mis-tap; give the row its own air. */
-  .hero-actions { margin-block-start: 28px; }
+  .hero-actions { margin-block-start: 36px; }
 }
 
 /* ==================== ABOUT ==================== */

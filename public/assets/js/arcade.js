@@ -1903,7 +1903,74 @@ const Arcade = (() => {
       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
   }
 
-  function buildControls(labels) {
+  /* ---------- the hammer's bubble ----------
+   * It lives next to the button rather than on the logo, because the hammer can
+   * be picked up from any tab and the logo is only on one of them — a nag about
+   * tidying up should be where the mess is being made.
+   *
+   * It shows on every pick-up (that is the joke), but leaves on its own after a
+   * few seconds so it never sits there while someone is swinging. Clicking it
+   * is the visitor saying "yes, I heard you": that one is remembered, same as
+   * the portrait bubble's. */
+
+  const HAMMER_BUBBLE_KEY = 'hammerBubble:hidden';
+  const BUBBLE_LIFE = 8000;
+  let hammerBubble = null;
+  let bubbleTimer = null;
+
+  const bubbleDismissed = () => {
+    try {
+      return localStorage.getItem(HAMMER_BUBBLE_KEY) === '1';
+    } catch {
+      return false; // storage blocked — a bubble beats a broken control
+    }
+  };
+
+  function makeHammerBubble(text) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'arcade-bubble';
+    el.title = 'לחצו להסתרה';
+    el.hidden = true;
+
+    // textContent, not innerHTML: this string comes from content.js and has no
+    // business carrying markup. A newline in it is a deliberate line break.
+    const msg = document.createElement('span');
+    String(text).split(/[\r\n]+/).forEach((line, i) => {
+      if (i) msg.appendChild(document.createElement('br'));
+      msg.appendChild(document.createTextNode(line));
+    });
+    const x = document.createElement('span');
+    x.className = 'bubble-x';
+    x.setAttribute('aria-hidden', 'true');
+    x.textContent = '×';
+
+    el.append(msg, x);
+    el.addEventListener('click', () => {
+      try { localStorage.setItem(HAMMER_BUBBLE_KEY, '1'); } catch {}
+      hideBubble();
+    });
+    return el;
+  }
+
+  function showBubble() {
+    if (!hammerBubble || bubbleDismissed()) return;
+    clearTimeout(bubbleTimer);
+    hammerBubble.hidden = false;
+    void hammerBubble.offsetWidth;        // so the transition has a start state
+    hammerBubble.classList.add('is-in');
+    bubbleTimer = setTimeout(hideBubble, BUBBLE_LIFE);
+  }
+
+  function hideBubble() {
+    if (!hammerBubble) return;
+    clearTimeout(bubbleTimer);
+    hammerBubble.classList.remove('is-in');
+    // Out of the layout once it has faded, so it stops taking clicks.
+    bubbleTimer = setTimeout(() => { hammerBubble.hidden = true; }, 260);
+  }
+
+  function buildControls(labels, bubbleText) {
     controls = document.createElement('div');
     controls.className = 'arcade-ctl';
 
@@ -1945,10 +2012,16 @@ const Arcade = (() => {
       // hadn't reached stays on the floor until the next time you put it down.
       if (hammerOn) sweep = null;
       else restoreAll();
+      if (hammerOn) showBubble();
+      else hideBubble();
       kick();
     });
 
     controls.append(castBtn, hammerBtn);
+    if (bubbleText) {
+      hammerBubble = makeHammerBubble(bubbleText);
+      controls.appendChild(hammerBubble);
+    }
     document.body.appendChild(controls);
     syncCast();
     syncHammer();
@@ -2028,7 +2101,7 @@ const Arcade = (() => {
     buildControls(cfg.labels || {
       cast: 'דמויות', castOn: 'הדמויות פעילות', castOff: 'הדמויות כבויות',
       hammer: 'פטיש', hammerOn: 'הפטיש פעיל',
-    });
+    }, cfg.hammerBubble);
 
     addEventListener('resize', () => {
       sizeCanvases();
