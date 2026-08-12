@@ -41,6 +41,12 @@ const SITE_CONTENT = {
 
     initials: 'א״ש',
 
+    // A speech bubble under the logo. It points at the arcade layer's remote
+    // button, so it is shown only while that layer is actually on — under
+    // "reduced motion", or with `arcade.enabled: false` below, there is no
+    // button and no bubble. Set to null to hide it anyway.
+    photoBubble: 'יותר מדי בלגן בעיניים?\nלחיצה על כפתור השלט יעלים את הדמויות',
+
     // WhatsApp number, NOT stored in the clear. This site is a static file that
     // anyone can read, and a plain 972… string is exactly what number-harvesting
     // bots grep for — so it's kept base64-encoded-backwards and decoded only at
@@ -74,7 +80,7 @@ const SITE_CONTENT = {
     paragraphs: [
       'איזה כיף לכם שהגעתם, אתם במקום הנכון...\nאם אתם פה סימן שכמוני, אתם מחפשים איך לעשות את החיים שלכם פשוטים יותר (וכמובן בלי לקרוע את הכיס 😉)',
       'אז מה מוצאים פה?\nאפליקציות, אוטומציות, קישורים לחיים קלים, הפתעות, ייעוץ ואוזן קשבת.',
-      'עוד קצת...\nאני בן זוג של תדהר, מדריכת הורים ויועצת שינה\n (מי שמכיר מכיר... ומי שלא [ללחוץ כאן מיד!](https://www.instagram.com/tidharlevy.parenting))\nאבא לאמרי, נטע וברוס 🧒👩🐕\nמהנדס תשתיות תוכנה, DevOps באפלייד מטריאלס (מוזמנים לשלוח קו"ח)',
+      'עוד קצת...\nנשוי לתדהר, מדריכת הורים ויועצת שינה\n (מי שמכיר מכיר... ומי שלא [ללחוץ כאן מיד!](https://www.instagram.com/tidharlevy.parenting))\nאבא לאמרי, נטע וברוס 🧒👩🐕\nמהנדס תשתיות תוכנה, DevOps באפלייד מטריאלס (מוזמנים לשלוח קו"ח)',
     ],
 
     // Cards with a short list inside. icon can be any emoji.
@@ -97,8 +103,7 @@ const SITE_CONTENT = {
         items: [
           'רשתות שיווק',
           'אנשי ועד',
-          'משפיעני רשת (חשבתי לכתוב ערסים, אבל משפיענים גרועים יותר)',
-          'לקנות בארץ מוצרים סינים (שזה כלול ברשתות שיווק ומשפיעני רשת)',
+          'לקנות בארץ מוצרים סינים',
         ],
       },
     ],

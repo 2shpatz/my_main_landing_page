@@ -133,11 +133,94 @@
 
 /* ---- Portrait ---- */
 
+/* The logo and its speech bubble as one column. `.hero-portrait` keeps its own
+ * box untouched — motion.js finds it by that class for the tap animations, and
+ * the arcade peeks characters out from behind it. */
+.hero-portrait-col {
+  display: grid;
+  justify-items: center;
+}
+
 .hero-portrait {
   position: relative;
   width: min(300px, 72vw);
   aspect-ratio: 1;
   margin-inline: auto;
+}
+
+.portrait-bubble {
+  position: relative;
+  max-width: 30ch;
+  margin-block-start: 22px;
+  padding: 13px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: center;
+  animation: bubble-in 640ms var(--ease-spring) 500ms both;
+  transition:
+    opacity var(--dur-med) var(--ease-in-out),
+    transform var(--dur-med) var(--ease-in-out),
+    border-color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.portrait-bubble:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-primary);
+}
+
+/* The dismiss hint. Decoration — the whole bubble is the target, and the
+ * button's accessible name is the message itself. */
+.bubble-x {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-end: 7px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: color var(--dur-fast);
+}
+
+.portrait-bubble:hover .bubble-x { color: var(--accent-primary); }
+
+/* Pressed: it shrinks away, then Motion takes it out of the layout. */
+.portrait-bubble.is-gone {
+  opacity: 0;
+  transform: scale(0.9) translateY(-6px);
+  pointer-events: none;
+  animation: none; /* or bubble-in's `both` would hold the entry state */
+}
+
+/* The tail: a square straddling the top edge, rotated 45° and outlined on the
+ * two sides that show, so it continues the bubble's own border. Centred with
+ * inset-inline + auto margins rather than a percentage offset, which would
+ * land differently under RTL. */
+.portrait-bubble::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -7px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: 12px; height: 12px;
+  background: var(--bg-elevated);
+  border-inline-start: 1px solid var(--border-strong);
+  border-block-start: 1px solid var(--border-strong);
+  transform: rotate(45deg);
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* It arrives with the page instead of popping in later. */
+@media (prefers-reduced-motion: reduce) {
+  .portrait-bubble { animation: none; }
 }
 
 .portrait-frame {
@@ -280,15 +363,19 @@
 @media (max-width: 860px) {
   .hero {
     padding-block: 4px 0;
-    gap: 18px;
+    gap: 26px;
   }
-  .hero-portrait {
-    order: -1;
-    width: min(215px, 50vw);
-  }
+  /* The grid item is the column, not the portrait inside it — `order` on the
+     inner element only sorts it against the bubble and leaves the whole block
+     below the copy. */
+  .hero-portrait-col { order: -1; }
+  .hero-portrait { width: min(215px, 50vw); }
+  .portrait-bubble { margin-block-start: 16px; }
   .hero h1 { margin-block-end: 8px; }
   .hero-role { margin-block-end: 6px; }
-  .hero-actions { margin-block-start: 18px; }
+  /* A paragraph running straight into the buttons under it reads as one block
+     and is easy to mis-tap; give the row its own air. */
+  .hero-actions { margin-block-start: 28px; }
 }
 
 /* ==================== ABOUT ==================== */

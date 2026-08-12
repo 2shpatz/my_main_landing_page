@@ -232,13 +232,42 @@ const Motion = (() => {
     });
   }
 
+  /* ---------- the speech bubble waves itself away ----------
+   * Dismissed for good, not just for this view: the About tab is rebuilt from
+   * scratch on every navigation back to it, and a note the visitor has already
+   * waved away should not reappear each time. Render asks bubbleHidden() before
+   * it draws one. */
+
+  const BUBBLE_KEY = 'portraitBubble:hidden';
+
+  const bubbleHidden = () => {
+    try {
+      return localStorage.getItem(BUBBLE_KEY) === '1';
+    } catch {
+      return false; // storage blocked — better a bubble than a broken page
+    }
+  };
+
+  // Attached even under reduced motion: this one is a control, not an effect.
+  function initBubble() {
+    document.addEventListener('click', (e) => {
+      const bubble = e.target.closest?.('.portrait-bubble');
+      if (!bubble) return;
+      try { localStorage.setItem(BUBBLE_KEY, '1'); } catch {}
+      bubble.classList.add('is-gone');
+      // Out of the layout only once it has finished fading.
+      setTimeout(() => bubble.remove(), reduced ? 0 : 260);
+    });
+  }
+
   function init() {
     initReveal();
     initScroll();
     initPointer();
     initRotator();
     initPortraitFx();
+    initBubble();
   }
 
-  return { init, observeAll, revealNow, reduced };
+  return { init, observeAll, revealNow, reduced, bubbleHidden };
 })();

@@ -186,6 +186,22 @@ const Render = (() => {
            fetchpriority="high" decoding="async">`
       : `<div class="portrait-initials">${esc(m.initials || '')}</div>`;
 
+    /* The bubble names the arcade's remote button, so it must not appear when
+     * there is no button to press: the layer builds nothing at all under
+     * reduced motion or when it is switched off in content. Saying otherwise
+     * would send the visitor hunting for a control that isn't there. */
+    const arcadeLive = C.arcade?.enabled !== false
+      && !(typeof Arcade !== 'undefined' && Arcade.reduced);
+    // A button rather than a paragraph: pressing it is what makes it go away,
+    // so it has to be reachable by keyboard and announced as pressable.
+    const bubbleGone = typeof Motion !== 'undefined' && Motion.bubbleHidden();
+    const bubble = arcadeLive && has(m.photoBubble) && !bubbleGone
+      ? `<button class="portrait-bubble" type="button" title="לחצו להסתרה">
+           <span>${rich(m.photoBubble)}</span>
+           <span class="bubble-x" aria-hidden="true">×</span>
+         </button>`
+      : '';
+
     const words = m.rotatingWords || [];
     // Reads as a sentence ("אני מפתח"), not a floating label.
     const rotator = words.length
@@ -210,9 +226,12 @@ const Render = (() => {
               </a>
             </div>
           </div>
-          <div class="hero-portrait reveal" style="--i:1">
-            <div class="portrait-frame" role="button" tabindex="0"
-                 aria-label="לחצו על התמונה להפתעה">${portrait}</div>
+          <div class="hero-portrait-col reveal" style="--i:1">
+            <div class="hero-portrait">
+              <div class="portrait-frame" role="button" tabindex="0"
+                   aria-label="לחצו על התמונה להפתעה">${portrait}</div>
+            </div>
+            ${bubble}
           </div>
         </div>
 
