@@ -45,7 +45,9 @@ const SITE_CONTENT = {
     // button, so it is shown only while that layer is actually on — under
     // "reduced motion", or with `arcade.enabled: false` below, there is no
     // button and no bubble. Set to null to hide it anyway.
-    photoBubble: 'יותר מדי בלגן בעיניים?\nלחיצה על כפתור השלט יעלים את הדמויות',
+    //
+    // `:joy:` draws the joystick icon that is on that button, inline in the text.
+    photoBubble: 'יותר מדי בלגן בעיניים?\nלחיצה על כפתור הארקייד :joy: יעלים את הדמויות',
 
     // WhatsApp number, NOT stored in the clear. This site is a static file that
     // anyone can read, and a plain 972… string is exactly what number-harvesting

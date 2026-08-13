@@ -43,7 +43,17 @@ const Render = (() => {
     (_, text, url) => `<a class="text-link" href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`,
   );
 
-  const rich = (s) => nl2br(links(esc(s)));
+  /* `:joy:` and friends inside copy become that icon, sitting inline with the
+   * text — for a sentence that names a control and wants to show the very glyph
+   * on it. Runs on already-escaped text, after nl2br so the svg's own line
+   * breaks survive, and only known names are touched: a stray pair of colons in
+   * Hebrew copy stays exactly as it was written. */
+  const inlineIcons = (s) => s.replace(
+    /:([a-z]+):/g,
+    (all, name) => (ICONS[name] ? icon(name, 'inline-icon') : all),
+  );
+
+  const rich = (s) => inlineIcons(nl2br(links(esc(s))));
 
   /* A title may carry a deliberate break — 'Spill It Out\nלמדריכות הורים'. What
    * follows it is a subtitle rather than a second headline, so it gets its own
@@ -80,6 +90,10 @@ const Render = (() => {
     linkedin: '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>',
     github: '<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-1-2.6c3.1-.3 6.4-1.5 6.4-7A5.4 5.4 0 0 0 20 4.8 5 5 0 0 0 19.9 1S18.7.6 16 2.5a13.4 13.4 0 0 0-7 0C6.3.6 5.1 1 5.1 1A5 5 0 0 0 5 4.8a5.4 5.4 0 0 0-1.4 3.8c0 5.4 3.3 6.6 6.4 7A3.4 3.4 0 0 0 9 18.1V22"/>',
     instagram: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/>',
+    // The arcade layer's joystick, same path as arcade.js's ICON.joy — copy that
+    // points at that button shows the glyph that is actually on it. If one is
+    // ever redrawn, redraw both.
+    joy: '<rect x="3" y="9" width="18" height="11" rx="3"/><path d="M8 14h3M9.5 12.5v3M16 14h.01M18 16h.01M12 9V6a3 3 0 0 1 3-3"/>',
   };
 
   const icon = (name, cls = '') => {
