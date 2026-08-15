@@ -80,7 +80,7 @@ const SITE_CONTENT = {
     // Use \n inside a string for a line break without starting a new paragraph.
     // For a link, write [the clickable text](https://the-url.com).
     paragraphs: [
-      'איזה כיף לכם שהגעתם, אתם במקום הנכון...\nאם אתם פה סימן שכמוני, אתם מחפשים איך לעשות את החיים שלכם פשוטים יותר (וכמובן בלי לקרוע את הכיס 😉)',
+      '\nאיזה כיף לכם שהגעתם, אתם במקום הנכון...\nאם אתם פה סימן שכמוני, אתם מחפשים איך לעשות את החיים שלכם פשוטים יותר (וכמובן בלי לקרוע את הכיס 😉)',
       'אז מה מוצאים פה?\nאפליקציות, אוטומציות, קישורים לחיים קלים, הפתעות, ייעוץ ואוזן קשבת.',
       'עוד קצת...\nנשוי לתדהר, מדריכת הורים ויועצת שינה\n (מי שמכיר מכיר... ומי שלא [ללחוץ כאן מיד!](https://www.instagram.com/tidharlevy.parenting))\nאבא לאמרי, נטע וברוס 🧒👩🐕\nמהנדס תשתיות תוכנה, DevOps באפלייד מטריאלס (מוזמנים לשלוח קו"ח)',
     ],
@@ -125,8 +125,6 @@ const SITE_CONTENT = {
       { src: 'assets/img/photo-deadsea.webp', alt: 'אני ותדהר בטיול מעל ים המלח, המים והמצוקים ברקע', focus: 'center 55%' },
       { src: 'assets/img/photo-family.webp', alt: 'סלפי של תדהר עם אמרי ונטע בבית' },
     ],
-    photosHint: 'אפשר להזיז את התמונה הצידה',
-
     // Your timeline. Newest first reads best. Delete the whole array to hide it.
     timeline: [],
   },
